@@ -626,6 +626,8 @@ int sprite_fillRect(struct sprite *spr, int x, int y, int w, int h, int color)
 			sprite_setPixelSafe(spr, x+X, y+Y, color);
 		}
 	}
+
+	return 0;
 }
 
 
