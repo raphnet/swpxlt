@@ -2,3 +2,8 @@
 *.elf
 *.map
 *.so
+paltool
+swpxlt
+png2vga
+dither
+plasmagen
