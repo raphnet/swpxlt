@@ -149,6 +149,32 @@ the following operations:
  - Build a palette from unique colors in image (max 256 - quantize and/or reduce colors first!
  - Load a palette from a file (valid formats as supported by paltool)
  - Dither the image using loaded or built palette (error diffusion dithering is implemented)
+ - Count the number of unique colors in an image (-showstats)
+
+
+#### Example : VGA color
+
+First a simple example. Let's say you are preparing an image to be displayed in a DOS application using VGA mode 13h.
+The VGA palette supports 6 bit per component (i.e. Red value, for instance, can be set from 0 to 63) and can display
+256 colors. But if you just use gimp and generate an optimal palette, the palette colors will use 8 bits per component.
+Hence, when loading the palette into the VGA hardware, the 2 least significant bits will be lost. So you may end up with
+duplicate colors, what a waste!
+
+First let's try quantizing to 6 bits. The -showstats reveals that there are still 983 unique colors, and those colors
+are listed by decreasing frequency order.
+
+`
+./dither -in images/vgafull.png -quantize 6 -showstats
+`
+
+Hundreds of colors are used for only 1 or 2 pixels! So to replace those by similar colors until there are only 256 colors left, -reduce 256 can be used.
+
+`
+./dither -in images/vgafull.png -quantize 6 -reduce 256 -showstats
+`
+
+
+#### Example : Sega Master System
 
 For instance, say the goal is to display a picture on the Sega Master System (SMS).
 The SMS can display 16 colors selected from a 64 color palette (2 bit per component). Here is one way to approach
@@ -206,9 +232,15 @@ options:
 input_file must be a 8-bit color PNG file.
 ```
 
-The append palette data (-p) option adds a copy of the palette after the image bytes in the output.
-This is a word containing the number of palette entries followed by the an array of RGB triplets in the 6 bit VGA format, ready to be copied to the color registers.
+The append palette data (-p) option adds a color count and copy of the palette after the image bytes. The
+count is a word, and it is followed by a number of RGB triplets in the 6 bit VGA format, ready to be copied to the color registers.
 
+Example:
+`
+./png2vga vga256.png vga256.bin -p
+`
+
+See examples/showvga.asm for simple example which loads a full screen image with palette.
 
 
 ### plasmagen
