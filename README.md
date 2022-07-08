@@ -240,7 +240,7 @@ Example:
 ./png2vga vga256.png vga256.bin -p
 `
 
-See examples/showvga.asm for simple example which loads a full screen image with palette.
+See [examples/showvga.asm](examples/showvga.asm) for simple example which loads a full screen image with palette.
 
 
 ### plasmagen
