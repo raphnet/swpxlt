@@ -52,7 +52,7 @@ Here is an example where an image is rotated by -26.5 degrees:
 ./swpxlt -i tv_original.png -R NICE8X -r -26.5 -o tv_nice8x.png
 `
 
-From left to right: Original,  Rotated with NICE8X, Rorated with RotSprite (For comparison only - not implemented by swpxlt):
+From left to right: Original, Rotated with Nearest Neighbor, Rotated with NICE8X, Rotated with RotSprite (For comparison only - RotSprite is not implemented):
 
 ![Original](images/tv_original.png) ![Nearest neighbor](images/tv_near.png)  ![NICE8X](images/tv_nice8x.png) ![RotSprite](images/tv_rotsprite.png)
 
