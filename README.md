@@ -52,14 +52,9 @@ Here is an example where an image is rotated by -26.5 degrees:
 ./swpxlt -i tv_original.png -R NICE8X -r -26.5 -o tv_nice8x.png
 `
 
-Original:
-![Original](images/tv_original.png)
+From left to right: Original,  Rotated with NICE8X, Rorated with RotSprite (For comparison only - not implemented by swpxlt):
 
-Rotated with NICE8X:
-![NICE8X](images/tv_nice8x.png)
-
-Rorated with RotSprite (For comparison only - not implemented by swpxlt):
-![NICE8X](images/tv_nice8x.png)
+![Original](images/tv_original.png) ![Nearest neighbor](images/tv_near.png)  ![NICE8X](images/tv_nice8x.png) ![RotSprite](images/tv_rotsprite.png)
 
 
 Here is an example scaling an image by a factor of 3 using the Scale3x algorithm.
@@ -69,11 +64,12 @@ Here is an example scaling an image by a factor of 3 using the Scale3x algorithm
 `
 
 Normal scale (nearest neighbor):
+
 ![Near 2x](images/rats_near.png)
 
 Scale2x:
-![Scale2x](images/rats_scale2x.png)
 
+![Scale2x](images/rats_scale2x.png)
 
 ### paltool
 
@@ -197,7 +193,7 @@ dither in the background)
 
 png2vga loads a 8-bit per pixel (256 color indexed image) and outputs raw chunky data (i.e. suitable for blitting to video memory at A000:0000).
 
-`
+```
 Usage: ./png2vga [options] input_file output_file
 
 options:
@@ -208,14 +204,14 @@ options:
 
 
 input_file must be a 8-bit color PNG file.
-`
+```
 
 The append palette data (-p) option adds a copy of the palette after the image bytes in the output.
 This is a word containing the number of palette entries followed by the an array of RGB triplets in the 6 bit VGA format, ready to be copied to the color registers.
 
 
 
-### plastmagen
+### plasmagen
 
 This is very basic and incomplete. For now it generates a circular plasma and can be animated by palette rotation
 by the program where it gets used..
@@ -225,5 +221,5 @@ by the program where it gets used..
 ./plasmagen -W 256 -H 256 -c 16 -o plasma256x256.png
 `
 
-![](images/plastma256x256.png)
+![Circular plasma example](images/plasma256x256.png)
 
