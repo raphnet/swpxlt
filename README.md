@@ -245,6 +245,16 @@ In this example, the built-in palette "cga1_high" to convert a picture to CGA:
 ![Original](images/flower.png)
 ![CGA version](images/flower_cga.png)
 
+In the example above, -gamma, -gain and -bias are used to somehow adjust the contrast so give a (subjective) better result in this very limited palette. 
+
+When more colors are available, for instance using the vga16 (ega/vga and cga text mode standard 16 colors), the conversion can be made directly without manipulating the image, resulting in a more "accurate" output:
+
+`
+./dither -in images/flower.png -loadpal builtin:vga16 -dither -out images/flower_16.png
+`
+
+![VGA16 version](images/flower_16.png)
+
 ### png2vga (for mode 13h)
 
 png2vga loads a 8-bit per pixel (256 color indexed image) and outputs raw chunky data (i.e. suitable for blitting to video memory at A000:0000).
