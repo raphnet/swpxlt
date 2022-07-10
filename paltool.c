@@ -3,13 +3,18 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "builtin_palettes.h"
 #include "palette.h"
 #include "sprite.h"
 
 int g_verbose = 0;
 
+
 void printHelp(void)
 {
+	int i;
+	const struct palette *pal;
+
 	printf("Usage: ./paltool [options]\n");
 
 	printf(" -h                Print usage information\n");
@@ -28,6 +33,7 @@ void printHelp(void)
 	printf(" -d percent        Apply a darkening effect from -I to -O of percent\n");
 	printf(" -s r,g,b          Set color at offset (0 < rgb < 256)\n");
 	printf("                   Offset auto-increments after each set operation.\n");
+	printf(" -B name           Load a built-in palette\n");
 	printf("\n");
 	printf("Supported ouput formats:\n");
 	printf("   vga_asm         VGA format (6 bit) in nasm format\n");
@@ -39,6 +45,16 @@ void printHelp(void)
 	printf("   gimp            Gimp palette (.GPL)\n");
 	printf("   png             Palette from PNG image (.PNG)\n");
 	printf("   jasc            JASC palette format (eg: Grafx2, Paint Shop Pro, etc)\n");
+	printf("\n");
+	printf("Built-in palettes:\n");
+
+	for (i=0; ; i++) {
+		pal = getBuiltinPalette_byId(i);
+		if (!pal)
+			break;
+
+		printf("   %-16s%s\n", getBuiltinPaletteName(i), getBuiltinPaletteDescription(i));
+	}
 }
 
 enum {
@@ -61,66 +77,64 @@ int parseOutputFormat(const char *arg)
 #define MODE_APPEND	0
 #define MODE_OFFSET 1
 
-int loadAndProcessPalette(const char *filename, int mode, int offset, palette_t *dst)
+int processPalette(const palette_t *src, int mode, int offset, palette_t *dst)
 {
-	palette_t src;
-	struct {
-		int (*load)(const char *filename, palette_t *dst);
-		const char *name;
-	} paletteLoaders[] = {
-		{ palette_loadGimpPalette, "Gimp" },
-		{ palette_loadJascPalette, "Jasc" },
-		{ palette_loadFromPng, "PNG" },
-		{ } // terminator
-	};
-	int i;
-
-	for (i=0; paletteLoaders[i].load; i++) {
-		if (g_verbose) {
-			printf("Checking for %s palette\n", paletteLoaders[i].name);
-		}
-
-		if (0 == paletteLoaders[i].load(filename, &src)) {
-			break;
-		}
-	}
-
-	if (!paletteLoaders[i].load) {
-		fprintf(stderr, "Unsupported palette file\n");
-		return -1;
-	}
-
-	if (g_verbose) {
-		printf("Loaded %d colors from %s palette\n", src.count, paletteLoaders[i].name);
-	}
-
 	switch (mode)
 	{
 		case MODE_OFFSET:
-			if (src.count + offset > 255) {
-				fprintf(stderr, "Cannot apply palette (%d colors) at offset %d: No space\n", src.count, offset);
+			if (src->count + offset > 255) {
+				fprintf(stderr, "Cannot apply palette (%d colors) at offset %d: No space\n", src->count, offset);
 			}
-			if (src.count + offset >= dst->count) {
-				dst->count = src.count + offset;
+			if (src->count + offset >= dst->count) {
+				dst->count = src->count + offset;
 			}
 			break;
 
 		case MODE_APPEND:
-			if (dst->count + src.count > 256) {
+			if (dst->count + src->count > 256) {
 				fprintf(stderr, "Cannot append palette - no space left\n");
 				return -1;
 			}
 			offset = dst->count;
-			dst->count += src.count;
+			dst->count += src->count;
 			break;
 
 		default:
 			return -1;
 	}
 
-	memcpy(dst->colors + offset, src.colors, src.count * sizeof(palent_t));
+	memcpy(dst->colors + offset, src->colors, src->count * sizeof(palent_t));
 
 	return 0;
+}
+
+int loadBuiltInPalette(const char *name, int mode, int offset, palette_t *dst)
+{
+	const palette_t *src;
+
+	src = getBuiltinPalette_byName(name);
+	if (!src) {
+		fprintf(stderr, "No such built-in palette\n");
+		return -1;
+	}
+
+	if (g_verbose) {
+		printf("Found %d colors in built-in palette %s\n", src->count, name);
+	}
+
+	return processPalette(src, mode, offset, dst);
+}
+
+int loadAndProcessPalette(const char *filename, int mode, int offset, palette_t *dst)
+{
+	palette_t src;
+
+
+	if (palette_load(filename, &src)) {
+		return -1;
+	}
+
+	return processPalette(&src, mode, offset, dst);
 }
 
 int apply_effect_darken(palette_t *pal, int source_index, int dest_index, int len, int percent)
@@ -247,7 +261,7 @@ int main(int argc, char **argv)
 	// Start with an empty palette
 	palette_clear(&palette);
 
-	while ((opt = getopt(argc, argv, "haO:i:o:if:n:vI:l:d:s:")) != -1) {
+	while ((opt = getopt(argc, argv, "haO:i:o:if:n:vI:l:d:s:B:")) != -1) {
 		switch(opt)
 		{
 			case '?': return -1;
@@ -277,6 +291,11 @@ int main(int argc, char **argv)
 				output_format = parseOutputFormat(optarg);
 				if (output_format < 0) {
 					fprintf(stderr, "Unsupported or invalid output format\n");
+					return -1;
+				}
+				break;
+			case 'B':
+				if (loadBuiltInPalette(optarg, mode, offset, &palette)) {
 					return -1;
 				}
 				break;

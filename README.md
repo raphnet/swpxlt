@@ -136,6 +136,21 @@ storing the result in the upper half (colors 128-255), you could use the followi
 	-I 0 -l 128 -O 128 -d 60
 `
 
+Paltool has a number of common built-in palettes, use -h to list them.
+
+```
+Built-in palettes:
+   vga16           Standard CGA/EGA/VGA text mode 16 color palette
+   cga0_low        CGA Pal. 0 (green/red/brown) low int.
+   cga0_high       CGA Pal. 0 (green/red/yellow) high int.
+   cga1_low        CGA Pal. 1 (cyan/magenta/gray) low int.
+   cga1_high       CGA Pal. 1 (cyan/magenta/white) high int.
+   cga_m5_low      CGA Mode 5 (cyan/red/gray) low int.
+   cga_m5_high     CGA Mode 5 (cyan/red/white) high int.
+```
+
+Built-in palettes can be loaded using the -B option.
+
 ### dither
 
 Dither is a tool to help convert a full color (or large palette) PNG to a lower color version. Dither supports
@@ -214,6 +229,21 @@ dither in the background)
 
 ![dither tool frontend](images/uidither.png)
 
+
+#### Example : CGA color
+
+dither can also use a fixed palette, loaded from a using the -loadpal argument. Built-in palettes can also be loaded
+by specifying "builtin: palettename" as filename. Suported file formats are the same as for paltool, and the built-in
+palette names are the same as for use with paltool.
+
+In this example, the built-in palette "cga1_high" to convert a picture to CGA:
+
+`
+./dither -in images/flower.png -loadpal builtin:cga1_high -gamma 0.2 -gain 11.5 -bias -10 -dither -out images/flower16.png
+`
+
+![Original](images/flower.png)
+![CGA version](images/flower_cga.png)
 
 ### png2vga (for mode 13h)
 

@@ -5,6 +5,7 @@
 #include "palette.h"
 #include "globals.h"
 #include "sprite.h"
+#include "builtin_palettes.h"
 
 static void printEnt_hex(const palent_t *ent, const char *suf)
 {
@@ -276,6 +277,17 @@ int palette_load(const char *filename, palette_t *dst)
 		{ } // terminator
 	};
 	int i;
+
+	if (strncmp(filename, "builtin:", 8)==0) {
+		const palette_t *builtin;
+		builtin = getBuiltinPalette_byName(filename+8);
+		if (!builtin) {
+			fprintf(stderr, "No such built-in palette");
+			return -1;
+		}
+		memcpy(dst, builtin, sizeof(palette_t));
+		return 0;
+	}
 
 	for (i=0; paletteLoaders[i].load; i++) {
 		if (g_verbose) {

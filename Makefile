@@ -3,28 +3,32 @@ LD=$(CC)
 CFLAGS=-Wall -g `libpng-config --cflags` -O3
 LDFLAGS=`libpng-config --libs` -lm
 
-PROG=paltool png2vga swpxlt plasmagen dither
+PROG=paltool png2vga png2cga swpxlt plasmagen dither
 OBJS=*.o
+COMMON=palette.o sprite.o builtin_palettes.o rgbimage.o sprite_transform.o
 
 all: $(PROG)
 
 clean:
 	rm -f $(PROG) $(OBJS)
 
-paltool: paltool.o palette.o sprite.o
+paltool: paltool.o $(COMMON)
 	$(LD) $(LDFLAGS) $^ -o $@
 
 png2vga: png2vga.o
 	$(LD) $(LDFLAGS) $^ -o $@
 
-swpxlt: swpxlt.o sprite.o palette.o sprite_transform.o
+png2cga: png2cga.o
 	$(LD) $(LDFLAGS) $^ -o $@
 
-dither: dither.o sprite.o palette.o rgbimage.o
+swpxlt: swpxlt.o $(COMMON)
 	$(LD) $(LDFLAGS) $^ -o $@
 
-plasmagen: plasmagen.o sprite.o palette.o
+dither: dither.o $(COMMON)
+	$(LD) $(LDFLAGS) $^ -o $@
+
+plasmagen: plasmagen.o $(COMMON)
 	$(LD) $(LDFLAGS) $^ -o $@
 
 %.o: %.c
-	$(CC) $(CLFAGS) -c -o $@ $^
+	$(CC) $(CFLAGS) -c -o $@ $^
