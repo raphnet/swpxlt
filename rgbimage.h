@@ -7,7 +7,7 @@
 
 typedef struct _pixel {
 	uint8_t r, g, b;
-	uint8_t reserved;
+	uint8_t reserved; // or alpha
 } pixel_t;
 
 
@@ -20,6 +20,7 @@ typedef struct _rgbimage {
 pixel_t *getPixel(rgbimage_t *img, int x, int y);
 void getPixelRGBsafe(rgbimage_t *img, int x, int y, uint8_t *r, uint8_t *g, uint8_t *b);
 void setPixelRGB(rgbimage_t *img, int x, int y, uint8_t r, uint8_t g, uint8_t b);
+void setPixelRGBA(rgbimage_t *img, int x, int y, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
 void setPixelRGBsafe(rgbimage_t *img, int x, int y, uint8_t r, uint8_t g, uint8_t b);
 
 rgbimage_t *allocRGBimage(int w, int h);

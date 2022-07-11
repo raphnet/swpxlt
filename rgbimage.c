@@ -26,6 +26,15 @@ void getPixelRGBsafe(rgbimage_t *img, int x, int y, uint8_t *r, uint8_t *g, uint
 	*b = p->b;
 }
 
+void setPixelRGBA(rgbimage_t *img, int x, int y, uint8_t r, uint8_t g, uint8_t b, uint8_t a)
+{
+	pixel_t *dst = getPixel(img, x, y);
+	dst->r = r;
+	dst->g = g;
+	dst->b = b;
+	dst->reserved = a;
+}
+
 void setPixelRGB(rgbimage_t *img, int x, int y, uint8_t r, uint8_t g, uint8_t b)
 {
 	pixel_t *dst = getPixel(img, x, y);
@@ -189,6 +198,16 @@ rgbimage_t *rgbi_loadPNG(const char *in_filename)
 				for (i=0; i<w; i++) {
 					uint8_t *src = row_pointers[y] + i;
 					setPixelRGB(img, i, y, src[0], src[0], src[0]);
+				}
+			}
+			break;
+
+		case PNG_COLOR_TYPE_RGBA:
+			for (y=0; y<h; y++) {
+				for (i=0; i<w; i++) {
+					uint8_t *src = row_pointers[y] + i*4;
+
+					setPixelRGBA(img, i, y, src[0], src[1], src[2], src[3]);
 				}
 			}
 			break;
