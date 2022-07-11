@@ -24,6 +24,71 @@ void palette_print(const palette_t *pal)
 	}
 }
 
+static void setTermBgColorRGB(const palent_t *ent)
+{
+	printf("\033[48;2;%d;%d;%dm", ent->r, ent->g, ent->b);
+}
+
+static void resetTermColor(void)
+{
+	printf("\033[0m");
+}
+
+static void printEnt_term(const palent_t *ent, const char *suf)
+{
+	int avg = (ent->r + ent->g + ent->b) / 3;
+
+	if (avg > 90) {
+		printf("\033[38;2;0;0;0m");
+	} else {
+		printf("\033[38;2;255;255;255m");
+	}
+
+	setTermBgColorRGB(ent);
+	printf("%02x%02x%02x\033[0m", ent->r, ent->g, ent->b);
+	resetTermColor();
+	printf(suf);
+}
+
+
+void palette_print_24bit(const palette_t *pal)
+{
+	int i;
+	int j;
+
+	// Top Header
+	printf("    ");
+	for (i=0; i<16; i++)  {
+		if (i >= pal->count) {
+			break;
+		}
+		printf("%X ", i);
+	}
+	printf("\n");
+
+	// Rows
+	for (i=0; i<16; i++) {
+		if (i*16 >= pal->count) {
+			break;
+		}
+
+		// Row label
+		printf("%X : ", i);
+
+		// Colors
+		for (j=0; j<16; j++) {
+			if (i*16+j >= pal->count)
+				break;
+			setTermBgColorRGB(&pal->colors[i*16+j]);
+			printf("  ");
+			resetTermColor();
+		}
+		resetTermColor();
+		printf("\n");
+	}
+
+}
+
 void palette_setColor(palette_t * pal, uint8_t index, int r, int g, int b)
 {
 	pal->colors[index].r = r;

@@ -75,7 +75,24 @@ Scale2x:
 
 paltool was originally created for a DOS game where I wanted to easily compose a 256 color VGA
 palette by appending colors from several separate image files, but it can also be used as a simple
-palette file converter.
+palette file converter or palette viewer.
+
+By default, if no output format is specified (-f), paltool displays the loaded palette in numerical format:
+
+```
+$ ./paltool -i images/flower_cga.png
+0: 000000
+1: 55ffff
+2: ff55ff
+3: ffffff
+$
+```
+
+Using the -x option, paltool can display the palette directly in your terminal if it supports
+24-bit true color escape codes (works in xterm, and probably Konsole and many others)
+
+![xterm colors](images/xterm_screenshot.png)
+
 
 At this time, the resulting palette data can be exported to the following formats (selected by option -f):
 

@@ -18,6 +18,7 @@ typedef struct palette_remap_lut {
 } palremap_lut_t;
 
 void palette_print(const palette_t *pal);
+void palette_print_24bit(const palette_t *pal);
 
 enum {
 	COLORMATCH_METHOD_DEFAULT = 0,

@@ -58,7 +58,8 @@ void printHelp(void)
 }
 
 enum {
-	OUTPUT_FORMAT_VGAASM = 0,
+	OUTPUT_FORMAT_NONE = 0,
+	OUTPUT_FORMAT_VGAASM,
 	OUTPUT_FORMAT_PNG,
 	OUTPUT_FORMAT_ANIMATOR,
 	OUTPUT_FORMAT_ANIMATOR_PRO,
@@ -251,17 +252,18 @@ int main(int argc, char **argv)
 	int percent = 100;
 	int length = 0;
 	int offset = 0, input_offset = 0;
-	int output_format = OUTPUT_FORMAT_VGAASM;
+	int output_format = OUTPUT_FORMAT_NONE;
 	const char *output_filename = "-";
 	const char *symbol_name = "palette";
 	FILE *out_fptr;
+	int printpal_colored = 0;
 
 	palette_t palette;
 
 	// Start with an empty palette
 	palette_clear(&palette);
 
-	while ((opt = getopt(argc, argv, "haO:i:o:if:n:vI:l:d:s:B:")) != -1) {
+	while ((opt = getopt(argc, argv, "haO:i:o:if:n:vI:l:d:s:B:x")) != -1) {
 		switch(opt)
 		{
 			case '?': return -1;
@@ -338,6 +340,9 @@ int main(int argc, char **argv)
 					offset++;
 				}
 				break;
+			case 'x':
+				printpal_colored = 1;
+				break;
 		}
 	}
 
@@ -348,7 +353,14 @@ int main(int argc, char **argv)
 	}
 
 
-	if (output_format == OUTPUT_FORMAT_PNG) {
+	if (output_format == OUTPUT_FORMAT_NONE) {
+		if (printpal_colored) {
+			palette_print_24bit(&palette);
+		} else {
+			palette_print(&palette);
+		}
+	}
+	else if (output_format == OUTPUT_FORMAT_PNG) {
 		sprite_t *palimage;
 		int i,x,y;
 
