@@ -69,7 +69,7 @@ int convertPNG(FILE *fptr_in, FILE *fptr_out)
 	png_infop info_ptr;
 	png_bytep *row_pointers;
 	int w,h,depth,color;
-	int ret;
+	int ret=0;
 	int x,y;
 
 	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
