@@ -27,7 +27,8 @@ libpng and ideally a linux system.
  - swpxlt : An indexed image scale and rotation tool (with scale2x/3x/4x support)
  - paltool : Palette manipulation/creation tool.
  - dither : A tool t help reduce colors (quantize) and dither with a computed or loaded palette.
- - png2vga : Convert PNG to a raw format suitable for VGA mode 13h.
+ - png2vga : Convert a PNG to a raw format suitable for VGA mode 13h.
+ - png2cga : Convert a PNG to a raw format suitable for CGA mode 4h.
 
 ### swpxlt
 
@@ -302,7 +303,7 @@ See [examples/showvga.asm](examples/showvga.asm) for simple example which loads 
 
 ### png2cga (for mode 4)
 
-png2cga loads an indexed color (max 4 colors) images and outputs raw data for writing to the two video memory planes (odd and even lines) at B8000:0000 and B800:2000.
+png2cga loads an indexed color (max 4 colors) image and outputs raw data for writing to the two video memory planes (odd and even lines) at B8000:0000 and B800:2000.
 
 ```
 Usage: ./png2cga input_file output_file
