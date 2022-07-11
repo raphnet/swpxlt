@@ -300,6 +300,18 @@ Example:
 See [examples/showvga.asm](examples/showvga.asm) for simple example which loads a full screen image with palette.
 
 
+### png2cga (for mode 4)
+
+png2cga loads an indexed color (max 4 colors) images and outputs raw data for writing to the two video memory planes (odd and even lines) at B8000:0000 and B800:2000.
+
+```
+Usage: ./png2cga input_file output_file
+```
+
+See [examples/showcga.asm](examples/showcga.asm) for simple example which loads a full screen image.
+
+
+
 ### plasmagen
 
 This is very basic and incomplete. For now it generates a circular plasma and can be animated by palette rotation
