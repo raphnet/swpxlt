@@ -37,5 +37,6 @@ int palette_loadFromPng(const char *filename, palette_t *dst);
 int palette_load(const char *filename, palette_t *dst);
 
 int palette_generateRemap(const palette_t *srcpal, const palette_t *dstpal, palremap_lut_t *dst);
+int palettes_match(const palette_t *pal1, const palette_t *pal2);
 
 #endif // _palette_h__

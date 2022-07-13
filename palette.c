@@ -379,4 +379,22 @@ int palette_load(const char *filename, palette_t *dst)
 	return 0;
 }
 
+int palettes_match(const palette_t *pal1, const palette_t *pal2)
+{
+	int i;
+
+	if (pal1->count != pal2->count)
+		return 0;
+
+	for (i=0; i<pal1->count; i++) {
+		if (pal1->colors[i].r != pal2->colors[i].r)
+			return 0;
+		if (pal1->colors[i].g != pal2->colors[i].g)
+			return 0;
+		if (pal1->colors[i].b != pal2->colors[i].b)
+			return 0;
+	}
+
+	return 1;
+}
 
