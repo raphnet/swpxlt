@@ -13,6 +13,8 @@ static void printHelp()
 	printf("\nOptions:\n");
 	printf(" -h                Print usage information\n");
 	printf(" -v                Enable verbose output\n");
+	printf(" -p                Show FLC palette\n");
+	printf(" -x                Show FLC palette in color (xterm)\n");
 }
 
 sprite_t *spriteFromFlicFrame(FlicFile *ff)
@@ -34,12 +36,16 @@ int main(int argc, char **argv)
 	int opt;
 	const char *infilename;
 	FlicFile *flic;
+	int print_palette = 0;
+	int colorxterm_palette = 0;
 
-	while ((opt = getopt(argc, argv, "hv")) != -1) {
+	while ((opt = getopt(argc, argv, "hvpx")) != -1) {
 		switch (opt) {
 			case '?': return -1;
 			case 'h': printHelp(); return 0;
 			case 'v': g_verbose = 1; break;
+			case 'p': print_palette = 1; break;
+			case 'x': colorxterm_palette = 1; break;
 		}
 	}
 
@@ -58,6 +64,17 @@ int main(int argc, char **argv)
 	}
 
 	printFlicInfo(flic);
+
+	if (print_palette || colorxterm_palette) {
+		if (0 == flic_readOneFrame(flic, 0)) {
+			printf("Palette:\n");
+			if (colorxterm_palette) {
+				palette_print_24bit(&flic->palette);
+			} else {
+				palette_print(&flic->palette);
+			}
+		}
+	}
 
 	flic_close(flic);
 
