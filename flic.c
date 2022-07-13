@@ -320,18 +320,35 @@ error:
 	return NULL;
 }
 
-static void flic_set_repeat(FlicFile *ff, int x, int y, const uint8_t *buf, int bufsize, int count)
+/* Copy pixels from a buffer */
+static void flic_memcpy(FlicFile *ff, int x, int y, const uint8_t *src, int size)
+{
+	if ((y < 0) || (x < 0) || (y >= ff->header.height)) {
+		fprintf(stderr, "Warning: flic_memcpy args out of range\n");
+		return;
+	}
+
+	if (x + size > ff->header.width) {
+		fprintf(stderr, "Warning: flic_memcpy attempting to write past image width\n");
+		return;
+	}
+
+
+	memcpy(ff->pixels + y * ff->pitch + x, src, size);
+}
+
+/* Set pixels using value(s) from an arbitrary size buffer, repeated count times */
+static void flic_memset_buf(FlicFile *ff, int x, int y, const uint8_t *buf, int bufsize, int count)
 {
 	int i;
 
 	if ((y < 0) || (x < 0) || (y >= ff->header.height)) {
-		fprintf(stderr, "Warning: flic_set_repeat args out of range\n");
+		fprintf(stderr, "Warning: flic_memset_buf args out of range\n");
 		return;
 	}
 
 	if (x + count*bufsize > ff->header.width) {
-		fprintf(stderr, "Warning: flic_set_repeat attempting to write past image width\n");
-		exit(1);
+		fprintf(stderr, "Warning: flic_memset_buf attempting to write past image width\n");
 		return;
 	}
 
@@ -445,26 +462,20 @@ static int handle_brun(FlicFile *ff, struct FlicChunkHeader *header)
 		for (p=0; x<ff->header.width; p++) {
 
 			// Get the count byte.
-			if (fread(&count, 1, 1, ff->fptr) != 1) {
-				return -1;
-			}
+			if (fread(&count, 1, 1, ff->fptr) != 1) { return -1; }
 
 			if (count < 0) {
 				// literal run
 				l = abs(count);
 	//			printf("LIT %d, ", l);
-				if (fread(tmp, l, 1, ff->fptr) != 1) {
-					return -1;
-				}
+				if (fread(tmp, l, 1, ff->fptr) != 1) { return -1; }
 
-				memcpy(ff->pixels + y * ff->pitch + x, tmp, l);
+				flic_memcpy(ff, x, y, tmp, l);
 				x += l;
 			} else {
 				// RLE run. Read byte to repeat
-				if (fread(&r, 1, 1, ff->fptr) != 1) {
-					return -1;
-				}
-				memset(ff->pixels + y * ff->pitch + x, r, count);
+				if (fread(&r, 1, 1, ff->fptr) != 1) { return -1; }
+				flic_memset_buf(ff, x, y, &r, 1, count);
 				x += count;
 	//			printf("RLE %d, ", count);
 			}
@@ -556,13 +567,13 @@ static int handle_delta_flc(FlicFile *ff, struct FlicChunkHeader *header)
 					return -1;
 				}
 				if (fread(tmp, ptype * 2, 1, ff->fptr) != 1) { return -1; }
-				memcpy(ff->pixels + y * ff->pitch + x, tmp, ptype * 2);
+				flic_memcpy(ff, x, y, tmp, ptype * 2);
 				x += ptype * 2;
 			} else if (ptype < 0) {
 				ptype = -ptype;
 				// get value to repeat
 				if (fread(buf, 2, 1, ff->fptr) != 1) { return -1; }
-				flic_set_repeat(ff,x,y,buf,2,ptype);
+				flic_memset_buf(ff,x,y,buf,2,ptype);
 				x += ptype * 2;
 			}
 
@@ -621,14 +632,14 @@ static int handle_delta_fli(FlicFile *ff, struct FlicChunkHeader *header)
 			if (rle_count < 0) { // rle
 				repeat = abs(rle_count);
 				if (fread(&val, 1, 1, ff->fptr) != 1) { return -1; }
-				memset(ff->pixels + y * ff->pitch + x, val, repeat);
+				flic_memset_buf(ff, x, y, &val, 1, repeat);
 				x += repeat;
 				if (g_verbose > 1) { printf("RLE=%d} ", repeat); }
 			} else {
 				// rle_count can be zero
 				if (rle_count > 0) {
 					if (fread(tmp, rle_count, 1, ff->fptr) != 1) { return -1; }
-					memcpy(ff->pixels + y * ff->pitch + x, tmp, rle_count);
+					flic_memcpy(ff, x, y, tmp, rle_count);
 					x += rle_count;
 				}
 				if (g_verbose > 1) { printf("LIT=%d} ", rle_count); }
