@@ -22,6 +22,40 @@ static uint16_t getLE16(const uint8_t *src, int *off)
 	return v;
 }
 
+static int writeZeros(FILE *fptr, int count)
+{
+	uint8_t buf = 0;
+	int i;
+
+	for (i=0; i<count; i++) {
+		if (1 != fwrite(&buf, 1,1,fptr)) {
+			return -1;
+		}
+	}
+	return 0;
+}
+
+static int writeLE16(FILE *fptr, uint32_t val)
+{
+	uint8_t buf[2];
+
+	buf[0] = val;
+	buf[1] = val>>8;
+
+	return fwrite(buf, 2, 1, fptr);
+}
+
+static int writeLE32(FILE *fptr, uint32_t val)
+{
+	uint8_t buf[4];
+
+	buf[0] = val;
+	buf[1] = val>>8;
+	buf[2] = val>>16;
+	buf[3] = val>>24;
+
+	return fwrite(buf, 4, 1, fptr);
+}
 
 int readFlicHeader(FILE *fptr, struct FlicHeader *dst)
 {
@@ -41,6 +75,7 @@ int readFlicHeader(FILE *fptr, struct FlicHeader *dst)
 	dst->depth = getLE16(buf, &off);
 	dst->flags = getLE16(buf, &off);
 	dst->speed = getLE32(buf, &off);
+	off += 2; // skip reserved word
 	dst->created = getLE32(buf, &off);
 	dst->creator = getLE32(buf, &off);
 	dst->updated = getLE32(buf, &off);
@@ -63,6 +98,104 @@ int readFlicHeader(FILE *fptr, struct FlicHeader *dst)
 	}
 
 	return 0;
+}
+
+int writeFlicHeader(FILE *fptr, const struct FlicHeader *src)
+{
+	writeLE32(fptr, src->size);
+
+	writeLE16(fptr, src->type);
+	writeLE16(fptr, src->frames);
+	writeLE16(fptr, src->width);
+	writeLE16(fptr, src->height);
+	writeLE16(fptr, src->depth);
+	writeLE16(fptr, src->flags);
+
+	writeLE32(fptr, src->speed);
+
+	writeLE16(fptr, src->reserved1);
+
+	writeLE32(fptr, src->created);
+	writeLE32(fptr, src->creator);
+	writeLE32(fptr, src->updated);
+	writeLE32(fptr, src->updater);
+
+	writeLE16(fptr, src->aspectx);
+	writeLE16(fptr, src->aspecty);
+
+	writeZeros(fptr, sizeof(src->reserved2));
+
+	writeLE32(fptr, src->oframe1);
+	writeLE32(fptr, src->oframe2);
+
+	writeZeros(fptr, sizeof(src->reserved3));
+
+	return 0;
+}
+
+int writeFrameHeader(FILE *fptr, const struct FlicFrameHeader *src)
+{
+	writeLE32(fptr, src->size);
+	writeLE16(fptr, src->type);
+	writeLE16(fptr, src->chunks);
+	writeZeros(fptr, 8);
+
+	return 0;
+}
+
+uint32_t writeFlicChunkHeader(FILE *fptr, const struct FlicChunkHeader *src)
+{
+	writeLE32(fptr, src->size);
+	writeLE16(fptr, src->type);
+	return 6;
+}
+
+
+uint32_t writeFlicChunk(FILE *fptr, uint16_t type, uint8_t *data, uint32_t size)
+{
+	writeLE32(fptr, size + 6);
+	writeLE16(fptr, type);
+	fwrite(data, size, 1, fptr);
+	return 6 + size;
+}
+
+static int write_chunk_color64_full(FILE *fptr, palette_t *pal)
+{
+	uint8_t buf[2048];
+	int pos = 0;
+	int i;
+
+	// Packet count (LE16) : 1
+	buf[pos] = 1; pos++;
+	buf[pos] = 0; pos++;
+
+	buf[pos] = 0; pos++; // skip
+	buf[pos] = 0; pos++; // change (0 means 256)
+
+	for (i=0; i<256; i++) {
+		buf[pos] = pal->colors[i].r; pos++;
+		buf[pos] = pal->colors[i].g; pos++;
+		buf[pos] = pal->colors[i].b; pos++;
+//		printf("%d:[%d,%d,%d], ", i, pal->colors[i].r, pal->colors[i].g, pal->colors[i].b);
+	}
+printf("Palette chunk payload size: %d\n", pos);
+	return writeFlicChunk(fptr, CHK_COLOR_256, buf, pos);
+}
+
+// Full uncompressed image chunk
+static int write_chunk_copy(FlicFile *ff, const uint8_t *pixels)
+{
+	struct FlicChunkHeader hd = {
+		.type = CHK_FLI_COPY,
+		.size = 6 + ff->pixels_allocsize,
+	};
+
+	writeFlicChunkHeader(ff->fptr, &hd);
+	if (fwrite(pixels, ff->pixels_allocsize, 1, ff->fptr) != 1) {
+		return -1;
+	}
+
+	return hd.size;
 }
 
 int readFrameHeader(FILE *fptr, struct FlicFrameHeader *dst)
@@ -199,6 +332,15 @@ static int flic_findFrame2(FlicFile *ff)
 void flic_close(FlicFile *ff)
 {
 	if (ff) {
+		// in encoding contextx, this will be a copy of the first frame.
+		// use it to generate a ring frame before closing the file.
+		if (ff->pixels_frame1) {
+			if (g_verbose) {
+				printf("Appending ring frame...\n");
+			}
+			flic_appendFrame(ff, ff->pixels_frame1, &ff->palette_frame1);
+		}
+
 		if (ff->fptr) {
 			fclose(ff->fptr);
 		}
@@ -210,9 +352,39 @@ void flic_close(FlicFile *ff)
 	}
 }
 
+/* Return true if this looks like a flic file (checks for magic number) */
+int isFlicFile(const char *filename)
+{
+	FILE *fptr;
+	uint8_t buf[2];
+	uint16_t magic;
+
+	fptr = fopen(filename, "rb");
+	if (!fptr) {
+		return 0;
+	}
+
+	// type
+	fseek(fptr, 4, SEEK_SET);
+	if (1 != fread(buf, 2, 1, fptr)) {
+		fclose(fptr);
+		return 0;
+	}
+	fclose(fptr);
+
+	magic = buf[0] | buf[1] << 8;
+
+	if (magic == FLC_MAGIC)
+		return 1;
+	if (magic == FLI_MAGIC)
+		return 1;
+
+	return 0;
+}
+
 FlicFile *flic_open(const char *filename)
 {
-	FlicFile *ff ;
+	FlicFile *ff;
 	int res;
 
 	ff = calloc(1, sizeof(FlicFile));
@@ -384,7 +556,7 @@ static int handle_palette(FlicFile *ff, struct FlicChunkHeader *header)
 	}
 
 	packet_count = tmp[0] | (tmp[1] << 8);
-//	printf("Palette packets: %d\n", packet_count);
+	if (g_verbose) { printf("Palette packets: %d\n", packet_count); }
 
 	for (i=0; i<packet_count; i++) {
 		if (fread(&skip, 1, 1, ff->fptr) != 1) {
@@ -399,7 +571,7 @@ static int handle_palette(FlicFile *ff, struct FlicChunkHeader *header)
 		// replace = 0 means 256
 		toCopy = (replace == 0) ? 256 : replace;
 
-//		printf("Skip: %d, replace: %d - len: %d\n", skip, replace, toCopy);
+		if (g_verbose) { printf("Skip: %d, replace: %d - len: %d, ", skip, replace, toCopy); }
 
 		dst += skip;
 
@@ -423,6 +595,7 @@ static int handle_palette(FlicFile *ff, struct FlicChunkHeader *header)
 			dst++;
 		}
 
+		if (g_verbose) { printf("\n"); }
 	}
 
 	if (dst > ff->palette.count) {
@@ -795,8 +968,6 @@ int flic_readOneFrame(FlicFile *ff, int loop)
 	return 0;
 }
 
-
-
 void printFlicInfo(FlicFile *ff)
 {
 	if (ff->header.type == FLC_MAGIC) {
@@ -817,6 +988,121 @@ void printFlicInfo(FlicFile *ff)
 	printf("  Second frame offset: %d\n", ff->header.oframe2);
 
 	printf("}\n");
+}
 
+FlicFile *flic_create(const char *filename, int w, int h)
+{
+	FlicFile *ff;
+
+	ff = calloc(1, sizeof(FlicFile));
+	if (!ff) {
+		perror("Could not allocate FlicFile");
+		return NULL;
+	}
+
+	ff->fptr = fopen(filename, "w+");
+	if (!ff->fptr) {
+		perror(filename);
+		free(ff);
+		return NULL;
+	}
+
+	ff->header.size = 128; // file header
+	ff->header.type = FLC_MAGIC;
+	ff->header.width = w;
+	ff->header.height = h;
+	ff->header.depth = 8;
+	ff->header.oframe1 = 128;
+
+	ff->pitch = ff->header.width;
+	ff->pixels_allocsize = ff->header.width * ff->header.height;
+	ff->pixels = calloc(1, ff->pixels_allocsize);
+	if (!ff->pixels) {
+		perror("Could not allocate pixel buffer for FLIC");
+		free(ff);
+		return NULL;
+	}
+
+	writeFlicHeader(ff->fptr, &ff->header);
+
+	printf("Main header size %ld\n", ftell(ff->fptr));
+
+	return ff;
+}
+
+int flic_appendFrame(FlicFile *ff, uint8_t *pixels, palette_t *palette)
+{
+	struct FlicFrameHeader frameHeader = {
+		.type = FRAME_HEADER_TYPE,
+		.size = 6,
+	};
+	long headeroff, endoff;
+
+	if (fseek(ff->fptr, 0, SEEK_END)) {
+		perror("could not seek");
+		return -1;
+	}
+
+	// write a temporary frame header
+	headeroff = ftell(ff->fptr);
+	writeFrameHeader(ff->fptr, &frameHeader);
+
+	// output frame subchunks...
+
+	// If palette changed, or if this is the first frame, we need to emit a palette chunk
+	if (!palettes_match(&ff->palette, palette) || ff->header.frames == 0) {
+		frameHeader.chunks++;
+		// lazy complete palette chunk - no compression
+		frameHeader.size += write_chunk_color64_full(ff->fptr, palette);
+		// update copy of palette for future comparison
+		memcpy(&ff->palette, palette, sizeof(palette_t));
+	}
+
+	// Output a BRUN or COPY chunk on the first frame as we are starting from nothing.
+	if (ff->header.frames == 0) {
+		frameHeader.chunks++;
+		frameHeader.size += write_chunk_copy(ff, pixels);
+		// update the "last image" for future comparison
+		memcpy(ff->pixels, pixels, ff->pixels_allocsize);
+	} else {
+		// Otherwise, if a difference was detected, output the most efficient chunk
+		// type (TODO!) for now it is all uncompressed
+		if (memcmp(ff->pixels, pixels, ff->pixels_allocsize) || ff->header.frames == 0) {
+			frameHeader.chunks++;
+			frameHeader.size += write_chunk_copy(ff, pixels);
+
+			// update the "last image" for future comparison
+			memcpy(ff->pixels, pixels, ff->pixels_allocsize);
+		}
+	}
+
+	// make a copy of the first frame, for encoding the ring frame later
+	if (ff->header.frames == 0) {
+		memcpy(&ff->palette_frame1, &ff->palette, sizeof(palette_t));
+		ff->pixels_frame1 = calloc(1, ff->pixels_allocsize);
+		if (!ff->pixels_frame1) {
+			perror("Could not allocate frame 1 copy");
+			return -1;
+		}
+	}
+
+	// note end position after writing frame subchunks
+	endoff = ftell(ff->fptr);
+
+	// check how many bytes were written, write the updated frame header
+	frameHeader.size = endoff - headeroff;
+	fseek(ff->fptr, headeroff, SEEK_SET);
+	printf("Write frame header at %ld\n", headeroff);
+	printf("size: %ld\n", endoff - headeroff);
+	writeFrameHeader(ff->fptr, &frameHeader);
+
+	// update file header
+	ff->header.frames++;
+	ff->header.size += frameHeader.size;
+	fseek(ff->fptr, 0, SEEK_SET);
+	writeFlicHeader(ff->fptr, &ff->header);
+
+
+	return 0;
 }
 

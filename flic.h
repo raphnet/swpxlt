@@ -30,16 +30,17 @@ struct FlicHeader {
 	uint16_t depth;
 	uint16_t flags;
 	uint32_t speed; // milliseconds for FLC, 1/70s fo FLI
+	uint16_t reserved1;
 	uint32_t created;
 	uint32_t creator; // FLC only
 	uint32_t updated; // FLC only
 	uint32_t updater; // FLC only
 	uint16_t aspectx; // FLC only
 	uint16_t aspecty; // FLC only
-	uint8_t reserved1[38];
+	uint8_t reserved2[38];
 	uint32_t oframe1; // FLC only
 	uint32_t oframe2; // FLC only
-	uint8_t reserved2[40];
+	uint8_t reserved3[40];
 };
 
 struct FlicPrefix {
@@ -61,6 +62,9 @@ struct FlicChunkHeader {
 	uint16_t type;
 };
 
+uint32_t writeFlicChunk(FILE *fptr, uint16_t type, uint8_t *data, uint32_t size);
+int writeFlicHeader(FILE *fptr, const struct FlicHeader *src);
+int writeFrameHeader(FILE *fptr, const struct FlicFrameHeader *src);
 int readFlicHeader(FILE *fptr, struct FlicHeader *dst);
 int readFrameHeader(FILE *fptr, struct FlicFrameHeader *dst);
 int readChunkHeader(FILE *fptr, struct FlicChunkHeader *dst);
@@ -74,7 +78,14 @@ typedef struct _FlicFile {
 	int pitch;
 	int pixels_allocsize;
 	uint16_t cur_frame;
+
+	// copy of the first frame,
+	// used when encoding a ring frame
+	palette_t palette_frame1;
+	uint8_t *pixels_frame1;
 } FlicFile;
+
+int isFlicFile(const char *filename);
 
 FlicFile *flic_open(const char *filename);
 void flic_close(FlicFile *ff);
@@ -83,5 +94,7 @@ int flic_readOneFrame(FlicFile *ff, int loop);
 
 void printFlicInfo(FlicFile *ff);
 
+FlicFile *flic_create(const char *filename, int w, int h);
+int flic_appendFrame(FlicFile *ff, uint8_t *pixels, palette_t *palette);
 
 #endif
