@@ -28,6 +28,10 @@ libpng and ideally a linux system.
  - paltool : Palette manipulation/creation tool.
  - dither : A tool t help reduce colors (quantize) and dither with a computed or loaded palette.
  - png2vga : Convert PNG to a raw format suitable for VGA mode 13h.
+ - flicinfo : Display information about a FLI/FLC file, such as frame size, frame count, speed...
+ - flic2png : Convert a FLI/FLC file to a series of PNG files
+ - flicmerge : Take FLI/FLC or PNG files as input and merge them into a single FLC file
+ - flicplay : FLI/FLC playback tool using SDL
 
 ### swpxlt
 
@@ -323,4 +327,99 @@ by the program where it gets used..
 `
 
 ![Circular plasma example](images/plasma256x256.png)
+
+
+### flicinfo
+
+flicinfo displays basic information about FLC/FLI files.
+
+```
+$ ./flicinfo examples/booze.flc
+
+Opening examples/booze.flc...
+FLC file {
+  File size: 8128410
+  Frames: 792
+  Image size: 128 x 80
+  Depth: 8
+  Flags: 0x0000
+  Delay between frames: 24 ms
+  First frame offset: 128
+  Second frame offset: 11168
+}
+Palette:
+0: 000000
+1: 555555
+2: aaaaaa
+3: ffffff
+4: 000000
+5: 000000
+6: 000000
+7: 000000
+...
+255: 000000
+```
+
+
+### flic2png
+
+flic2png reads a .FLI or .FLC file and outputs all frames to individual PNG files.
+
+```
+Usage: ./flic2png [options] file.[fli,flc]
+
+Options:
+ -h                Print usage information
+ -v                Enable verbose output
+ -o basename       Base filename
+```
+
+Files will be named in the format basename_XXXXX.png where basename is
+what was given using the -o option.
+
+Example:
+`
+  ./flic2png animation.fli -o out/animation
+`
+
+The above will create out/animiation_XXXXX.png files
+
+
+### flicmerge
+
+flicmerge combines frames from many sources (FLI,FLC or PNG) files and generates
+a new FLC file. The width/height must be the same for all source material, but
+the palette may change any number of tiles (palette update chunks will be inserted
+in the output).
+
+Warning: flicmerge does not compress the frames in the output yet, so the output
+file will be a lot larger than it should be.
+
+```
+Usage: ./flicmerge [options] files...
+
+flicmerge reads 1 or more files (FLC/FLI/PNG) and outputs a single
+.FLC file.
+
+Options:
+ -h                Print usage information
+ -v                Enable verbose output
+ -o outfile        Set output file (default: out.flc)
+ -d delay_ms       Delay between frames in ms. Default: auto
+```
+
+Example:
+`
+  ./flicmerge -d 60 image1.png image2.png ... image64.png -o animation.flc
+`
+
+### flicplay
+
+flicplay simply plays the FLI/FLC passed in argument in loop. The speed
+can be overridden using the -d argument. There is no user interface.
+
+Example:
+`
+  ./flicplay test.fli
+`
 
