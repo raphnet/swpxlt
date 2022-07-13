@@ -3,7 +3,7 @@ LD=$(CC)
 CFLAGS=-Wall -g `libpng-config --cflags` -O3
 LDFLAGS=`libpng-config --libs` -lm
 
-PROG=paltool png2vga png2cga swpxlt plasmagen dither flicinfo flic2png flicplay
+PROG=paltool png2vga png2cga swpxlt plasmagen dither flicinfo flic2png flicplay flicmerge
 OBJS=*.o
 COMMON=palette.o sprite.o builtin_palettes.o rgbimage.o sprite_transform.o
 
@@ -34,6 +34,9 @@ flicinfo: flicinfo.o flic.o $(COMMON)
 	$(LD) $(LDFLAGS) $^ -o $@
 
 flic2png: flic2png.o flic.o $(COMMON)
+	$(LD) $(LDFLAGS) $^ -o $@
+
+flicmerge: flicmerge.o flic.o $(COMMON)
 	$(LD) $(LDFLAGS) $^ -o $@
 
 flicplay: flicplay.o flic.o $(COMMON)
