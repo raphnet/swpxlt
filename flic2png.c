@@ -10,7 +10,7 @@ static void printHelp()
 {
 	printf("Usage: ./flic2png [options] file.[fli,flc]\n");
 	printf("\n");
-	printf("flic2png read a .FLI or .FLC file and outputs all frames to individual PNG files.\n");
+	printf("flic2png reads a .FLI or .FLC file and outputs all frames to individual PNG files.\n");
 
 	printf("\nOptions:\n");
 	printf(" -h                Print usage information\n");
