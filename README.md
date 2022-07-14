@@ -35,6 +35,7 @@ On a Debian system, besides the obvious (gcc, make, etc) you need:
  - paltool : Palette manipulation/creation tool.
  - dither : A tool t help reduce colors (quantize) and dither with a computed or loaded palette.
  - png2vga : Convert PNG to a raw format suitable for VGA mode 13h.
+ - png2cga : Convert a PNG to a raw format suitable for CGA mode 4h.
  - flicinfo : Display information about a FLI/FLC file, such as frame size, frame count, speed...
  - flic2png : Convert a FLI/FLC file to a series of PNG files
  - flicmerge : Take FLI/FLC, Animated GIF or PNG files as input and merge them into a single FLC file
@@ -314,7 +315,7 @@ See [examples/showvga.asm](examples/showvga.asm) for simple example which loads 
 
 ### png2cga (for mode 4)
 
-png2cga loads an indexed color (max 4 colors) images and outputs raw data for writing to the two video memory planes (odd and even lines) at B8000:0000 and B800:2000.
+png2cga loads an indexed color (max 4 colors) image and outputs raw data for writing to the two video memory planes (odd and even lines) at B8000:0000 and B800:2000.
 
 ```
 Usage: ./png2cga input_file output_file
