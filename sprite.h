@@ -31,6 +31,10 @@ void freeSprite(sprite_t *spr);
 sprite_t *sprite_loadPNG(const char *in_filename, int n_expected_colors, uint32_t flags);
 int sprite_savePNG(const char *out_filename, sprite_t *spr, uint32_t flags);
 
+sprite_t *sprite_loadGIF(const char *in_filename, int n_expected_colors, uint32_t flags);
+
+sprite_t *sprite_load(const char *in_filename, int n_expected_colors, uint32_t flags);
+
 void printSprite(sprite_t *spr);
 void sprite_setPixel(sprite_t *spr, int x, int y, int value);
 void sprite_setPixelSafe(sprite_t *spr, int x, int y, int value);

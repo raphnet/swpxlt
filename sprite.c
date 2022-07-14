@@ -4,6 +4,9 @@
 #include <png.h>
 #include "sprite.h"
 #include "globals.h"
+#ifdef WITH_GIF_SUPPORT
+#include "gif_lib.h"
+#endif
 
 static jmp_buf jmpbuf;
 
@@ -250,7 +253,6 @@ sprite_t *sprite_loadPNG(const char *in_filename, int n_expected_colors, uint32_
 
 	if (png_sig_cmp(header, 0, 8)) {
 		fclose(fptr_in);
-		fprintf(stderr, "Not a PNG file\n");
 		return NULL;
 	}
 
@@ -388,6 +390,95 @@ error:
 	if (fptr_in) {
 		fclose(fptr_in);
 	}
+
+	return NULL;
+}
+
+#ifdef WITH_GIF_SUPPORT
+sprite_t *sprite_loadGIF(const char *in_filename, int n_expected_colors, uint32_t flags)
+{
+	GifFileType *gf;
+	GifColorType *color;
+	sprite_t *sprite = NULL;
+	int err = 0;
+	int i;
+	int y;
+
+	gf = DGifOpenFileName(in_filename, &err);
+	if (!gf) {
+		if (err == D_GIF_ERR_NOT_GIF_FILE) {
+			return NULL;
+		}
+		fprintf(stderr, "Could not open gif: %s\n", GifErrorString(err));
+		return NULL;
+	}
+
+	if (GIF_OK != DGifSlurp(gf)) {
+		fprintf(stderr, "Could not read gif: %s\n", GifErrorString(err));
+		goto error;
+	}
+
+	if (gf->ImageCount < 1) {
+		fprintf(stderr, "No images in GIF!?\n");
+		goto error;
+	}
+
+	// Create sprite with same size as GIF
+	sprite = allocSprite(gf->SWidth, gf->SHeight, gf->SColorMap->ColorCount, 0);
+	if (!sprite) {
+		fprintf(stderr, "failed to allocate sprite\n");
+		goto error;
+	}
+
+	// Copy colormap
+	color = gf->SColorMap->Colors;
+	for (i=0; i<gf->SColorMap->ColorCount; i++,color++) {
+		palette_setColor(&sprite->palette, i, color->Red, color->Green, color->Blue);
+	}
+
+	// Set background color
+	memset(sprite->pixels, gf->SBackGroundColor, sprite->w * sprite->h);
+
+	// Copy image
+	for (i=0,y = gf->SavedImages[0].ImageDesc.Top; y < gf->SavedImages[0].ImageDesc.Top + gf->SavedImages[0].ImageDesc.Height; y++,i++) {
+		memcpy(sprite->pixels + gf->SavedImages[0].ImageDesc.Left + y * sprite->w,
+				gf->SavedImages[0].RasterBits + gf->SavedImages[0].ImageDesc.Width * i,
+				gf->SavedImages[0].ImageDesc.Width);
+	}
+
+	if (GIF_OK != DGifCloseFile(gf, &err)) {
+		fprintf(stderr, "Warning: Could not close gif: %s\n", GifErrorString(err));
+	}
+
+	return sprite;
+
+error:
+	if (gf) {
+		if (GIF_OK != DGifCloseFile(gf, &err)) {
+			fprintf(stderr, "Could not close gif: %s\n", GifErrorString(err));
+		}
+	}
+	if (sprite) {
+		freeSprite(sprite);
+	}
+
+	return NULL;
+}
+#endif
+
+sprite_t *sprite_load(const char *in_filename, int n_expected_colors, uint32_t flags)
+{
+	sprite_t *spr;
+
+	spr = sprite_loadPNG(in_filename, n_expected_colors, flags);
+	if (spr)
+		return spr;
+
+#ifdef WITH_GIF_SUPPORT
+	spr = sprite_loadGIF(in_filename, n_expected_colors, flags);
+	if (spr)
+		return spr;
+#endif
 
 	return NULL;
 }
