@@ -4,6 +4,7 @@
 #include <getopt.h>
 #include "sprite.h"
 #include "flic.h"
+#include "anim.h"
 
 #define DEFAULT_PNG_DELAY	24
 #define DEFAULT_OUTFILE	"out.flc"
@@ -45,7 +46,8 @@ int main(int argc, char **argv)
 	const char *outfilename = DEFAULT_OUTFILE;
 	FlicFile *outflic = NULL;
 	FlicFile *flic = NULL;
-	sprite_t *png = NULL;
+	sprite_t *img = NULL;
+	animation_t *anim = NULL;
 	int w = 0, h = 0;
 	int delay = 0;
 
@@ -86,6 +88,7 @@ int main(int argc, char **argv)
 //		printf("Reading %s...\n", infilename);
 
 		/* Load a new file*/
+
 		if (isFlicFile(infilename)) {
 			flic = flic_open(infilename);
 			if (!flic) {
@@ -95,16 +98,17 @@ int main(int argc, char **argv)
 			printFlicInfo(flic);
 			w = flic->header.width;
 			h = flic->header.height;
-		} else {
+		} else if ((img = sprite_loadPNG(infilename, 0, 0))) {
 //			printf("Not a FLC/FLI file.\n");
-			png = sprite_loadPNG(infilename, 0, 0);
-			if (!png) {
-				fprintf(stderr, "Error: Unsupported input file: %s\n", infilename);
-				return -1;
-			}
-			w = png->w;
-			h = png->h;
-
+			img = sprite_loadPNG(infilename, 0, 0);
+			w = img->w;
+			h = img->h;
+		} else if ((anim = anim_load(infilename))) {
+			w = anim->w;
+			h = anim->h;
+		} else {
+			fprintf(stderr, "Error: Unsupported input file: %s\n", infilename);
+			return -1;
 		}
 
 		/* Now that the size of the source material is known, create the output */
@@ -134,13 +138,19 @@ int main(int argc, char **argv)
 				}
 			}
 		}
-		if (png) {
+		if (img) {
 			if (outflic->header.speed == 0) {
 				outflic->header.speed = DEFAULT_PNG_DELAY;
 			}
-			if (flic_appendFrame(outflic, png->pixels, &png->palette)) {
+			if (flic_appendFrame(outflic, img->pixels, &img->palette)) {
 				return -1;
 			}
+		}
+		if (anim) {
+			if (outflic->header.speed == 0) {
+				outflic->header.speed = anim->delay;
+			}
+			anim_addAllFramesToFlic(anim, outflic);
 		}
 
 
@@ -149,9 +159,13 @@ int main(int argc, char **argv)
 			flic_close(flic);
 			flic = NULL;
 		}
-		if (png) {
-			freeSprite(png);
-			png = NULL;
+		if (img) {
+			freeSprite(img);
+			img = NULL;
+		}
+		if (anim) {
+			anim_free(anim);
+			anim = NULL;
 		}
 	}
 

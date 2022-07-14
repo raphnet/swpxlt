@@ -49,7 +49,7 @@ flicinfo: flicinfo.o flic.o $(COMMON)
 flic2png: flic2png.o flic.o $(COMMON)
 	$(LD) $(LDFLAGS) $^ -o $@
 
-flicmerge: flicmerge.o flic.o $(COMMON)
+flicmerge: flicmerge.o flic.o anim.o $(COMMON)
 	$(LD) $(LDFLAGS) $^ -o $@
 
 flicplay: flicplay.o flic.o $(COMMON)
