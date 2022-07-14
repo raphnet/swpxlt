@@ -19,7 +19,14 @@ automated batch processing.
 
 ## Dependencies / Runtime
 
-libpng and ideally a linux system.
+ - libpng and ideally a linux system.
+ - SDL 1.2
+ - gif_lib (optional, disable by editing Makefile)
+
+On a Debian system, besides the obvious (gcc, make, etc) you need:
+ - libpng-dev
+ - libgif-dev
+ - libsdl1.2-dev
 
 
 ## The Tools
@@ -30,7 +37,7 @@ libpng and ideally a linux system.
  - png2vga : Convert PNG to a raw format suitable for VGA mode 13h.
  - flicinfo : Display information about a FLI/FLC file, such as frame size, frame count, speed...
  - flic2png : Convert a FLI/FLC file to a series of PNG files
- - flicmerge : Take FLI/FLC or PNG files as input and merge them into a single FLC file
+ - flicmerge : Take FLI/FLC, Animated GIF or PNG files as input and merge them into a single FLC file
  - flicplay : FLI/FLC playback tool using SDL
 
 ### swpxlt
@@ -114,6 +121,7 @@ For instance, to load the palette from a PNG file and export it in .COL (animato
 paltool can load colors from different sources (-i) and the format is auto-detected.
 
  - PNG (loads palette from a .PNG image)
+ - GIF (loads palette from a .GIF image)
  - Gimp palette files (.GPL)
  - JASC palette files (Paintshop Pro, Grafx2, etc)
 
@@ -387,9 +395,9 @@ The above will create out/animiation_XXXXX.png files
 
 ### flicmerge
 
-flicmerge combines frames from many sources (FLI,FLC or PNG) files and generates
-a new FLC file. The width/height must be the same for all source material, but
-the palette may change any number of tiles (palette update chunks will be inserted
+flicmerge combines frames from many sources (FLI,FLC,Animated or static GIF,PNG) files
+and generates a new FLC file. The width/height must be the same for all source material,
+but the palette may change any number of tiles (palette update chunks will be inserted
 in the output).
 
 Warning: flicmerge does not compress the frames in the output yet, so the output
