@@ -297,11 +297,11 @@ done:
 	return 0;
 }
 
-int palette_loadFromPng(const char *filename, palette_t *dst)
+int palette_loadFromImage(const char *filename, palette_t *dst)
 {
 	sprite_t *spr;
 
-	spr = sprite_loadPNG(filename, 0, 0);
+	spr = sprite_load(filename, 0, 0);
 	if (!spr) {
 		return -1;
 	}
@@ -321,7 +321,7 @@ int palette_load(const char *filename, palette_t *dst)
 	} paletteLoaders[] = {
 		{ palette_loadGimpPalette, "Gimp" },
 		{ palette_loadJascPalette, "Jasc" },
-		{ palette_loadFromPng, "PNG" },
+		{ palette_loadFromImage, "Image" },
 		{ } // terminator
 	};
 	int i;
