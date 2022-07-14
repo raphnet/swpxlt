@@ -49,14 +49,6 @@ void sprite_to_SDL(sprite_t *spr, SDL_Surface *surface)
 	}
 }
 
-void flicFrameToSprite(FlicFile *ff, sprite_t *s)
-{
-	memcpy(s->pixels, ff->pixels, ff->pixels_allocsize);
-	memcpy(&s->palette, &ff->palette, sizeof(palette_t));
-}
-
-
-
 int main(int argc, char **argv)
 {
 	int opt;
@@ -134,7 +126,7 @@ int main(int argc, char **argv)
 		SDL_Event ev;
 
 		// Convert Flic frame to sprite_t
-		flicFrameToSprite(flic, flicsprite);
+		flic_frameToSprite(flic, flicsprite);
 
 		// Scale it up
 		sprite_copyPalette(flicsprite, scaledsprite);

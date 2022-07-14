@@ -97,4 +97,10 @@ void printFlicInfo(FlicFile *ff);
 FlicFile *flic_create(const char *filename, int w, int h);
 int flic_appendFrame(FlicFile *ff, uint8_t *pixels, palette_t *palette);
 
+// Update a sprite from the current flic image. Size must be identical.
+int flic_frameToSprite(const FlicFile *ff, sprite_t *s);
+
+// Allocate a new sprite containing a copy of the current flic image
+sprite_t *flic_spriteFromFrame(const FlicFile *ff);
+
 #endif

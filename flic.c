@@ -1107,3 +1107,27 @@ int flic_appendFrame(FlicFile *ff, uint8_t *pixels, palette_t *palette)
 	return 0;
 }
 
+int flic_frameToSprite(const FlicFile *ff, sprite_t *s)
+{
+	if ((ff->header.width != s->w) || (ff->header.height != s->h)) {
+		fprintf(stderr, "Error: flic_frameToSprite size mismatch\n");
+		return -1;
+	}
+	memcpy(s->pixels, ff->pixels, ff->pixels_allocsize);
+	memcpy(&s->palette, &ff->palette, sizeof(palette_t));
+
+	return 0;
+}
+
+sprite_t *flic_spriteFromFrame(const FlicFile *ff)
+{
+	sprite_t *s;
+
+	s = allocSprite(ff->header.width, ff->header.height, 256, 0);
+	if (s) {
+		flic_frameToSprite(ff, s);
+	}
+
+	return s;
+}
+
