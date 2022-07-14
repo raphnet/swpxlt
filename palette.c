@@ -34,23 +34,6 @@ static void resetTermColor(void)
 	printf("\033[0m");
 }
 
-static void printEnt_term(const palent_t *ent, const char *suf)
-{
-	int avg = (ent->r + ent->g + ent->b) / 3;
-
-	if (avg > 90) {
-		printf("\033[38;2;0;0;0m");
-	} else {
-		printf("\033[38;2;255;255;255m");
-	}
-
-	setTermBgColorRGB(ent);
-	printf("%02x%02x%02x\033[0m", ent->r, ent->g, ent->b);
-	resetTermColor();
-	printf(suf);
-}
-
-
 void palette_print_24bit(const palette_t *pal)
 {
 	int i;
