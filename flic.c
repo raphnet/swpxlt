@@ -1093,8 +1093,8 @@ int flic_appendFrame(FlicFile *ff, uint8_t *pixels, palette_t *palette)
 	// check how many bytes were written, write the updated frame header
 	frameHeader.size = endoff - headeroff;
 	fseek(ff->fptr, headeroff, SEEK_SET);
-	printf("Write frame header at %ld\n", headeroff);
-	printf("size: %ld\n", endoff - headeroff);
+//	printf("Write frame header at %ld\n", headeroff);
+//	printf("size: %ld\n", endoff - headeroff);
 	writeFrameHeader(ff->fptr, &frameHeader);
 
 	// update file header
