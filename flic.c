@@ -1080,6 +1080,7 @@ int flic_appendFrame(FlicFile *ff, uint8_t *pixels, palette_t *palette)
 	if (ff->header.frames == 0) {
 		memcpy(&ff->palette_frame1, &ff->palette, sizeof(palette_t));
 		ff->pixels_frame1 = calloc(1, ff->pixels_allocsize);
+		memcpy(ff->pixels_frame1, ff->pixels, ff->pixels_allocsize);
 		if (!ff->pixels_frame1) {
 			perror("Could not allocate frame 1 copy");
 			return -1;
