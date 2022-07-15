@@ -57,7 +57,6 @@ int sprite_remapPalette(sprite_t *sprite, const palette_t *dstpal);
 sprite_t *sprite_packPixels(const sprite_t *spr, int bits_per_pixel);
 
 void sprite_getFullRect(const sprite_t *src, spriterect_t *dst);
-void sprite_copyRect(const sprite_t *src, const spriterect_t *src_rect, sprite_t *dst, const spriterect_t *dst_rect);
-
+int sprite_copyRect(const sprite_t *src, const spriterect_t *src_rect, sprite_t *dst, const spriterect_t *dst_rect);
 
 #endif // _sprite_h__

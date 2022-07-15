@@ -669,8 +669,9 @@ void sprite_getFullRect(const sprite_t *sprite, spriterect_t *dst)
 	dst->h = sprite->h;
 }
 
+
 // NULL src means full surface
-void sprite_copyRect(const sprite_t *src, const spriterect_t *src_rect, sprite_t *dst, const spriterect_t *dst_rect)
+int sprite_copyRect(const sprite_t *src, const spriterect_t *src_rect, sprite_t *dst, const spriterect_t *dst_rect)
 {
 	int x,y,w,h,src_x,src_y,dst_x,dst_y;
 	uint8_t pixel;
@@ -694,6 +695,23 @@ void sprite_copyRect(const sprite_t *src, const spriterect_t *src_rect, sprite_t
 		dst_x = 0;
 		dst_y = 0;
 	}
+
+//	printf("Before clipping %d,%d -> %d,%d [%d x %d]\n", src_x, src_y, dst_x, dst_y, w, h);
+
+	// Validate/trim the destination
+	if (dst_x + w > dst->w) { w -= (dst_x + w)-dst->w; }
+	if (dst_y + h > dst->h) { h -= (dst_y + h)-dst->h; }
+	if (dst_x < 0) { w += dst_x; src_x += -dst_x; dst_x = 0; }
+	if (dst_y < 0) { h += dst_y; src_y += -dst_y; dst_y = 0; }
+	if ((w <= 0) || (h <= 0)) { return -1; }
+
+	if (src_x + w > src->w) { w -= (src_x + w)-src->w; }
+	if (src_y + h > src->h) { h -= (src_y + h)-src->h; }
+	if (src_x < 0) { w += src_x; dst_x += -src_x; src_x = 0; }
+	if (src_y < 0) { h += src_y; dst_y += -src_y; src_y = 0; }
+	if ((w <= 0) || (h <= 0)) { return -1; }
+
+//	printf("After clipping %d,%d -> %d,%d [%d x %d]\n", src_x, src_y, dst_x, dst_y, w, h);
 
 //	printf("Copyrect loop: %d x %d\n", w,h);
 
@@ -724,13 +742,15 @@ void sprite_copyRect(const sprite_t *src, const spriterect_t *src_rect, sprite_t
 		// Blitting using mask
 		for (y=0; y<h; y++) {
 			for (x=0; x<w; x++) {
-				if (!sprite_getPixelMask(src, x, y)) {
+				if (!sprite_getPixelMask(src, x + src_x, y + src_y)) {
 					pixel = sprite_getPixel(src, x + src_x, y + src_y);
 					sprite_setPixel(dst, x + dst_x, y + dst_y, pixel);
 				}
 			}
 		}
 	}
+
+	return 0;
 }
 
 void sprite_fill(struct sprite *spr, int color)
