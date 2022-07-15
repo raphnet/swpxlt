@@ -7,7 +7,7 @@ LDFLAGS=`libpng-config --libs` -lm
 WITH_GIF_SUPPORT=1
 
 
-PROG=paltool png2vga png2cga swpxlt plasmagen dither flicinfo flic2png flicplay flicmerge
+PROG=paltool png2vga png2cga swpxlt plasmagen dither flicinfo flic2png flicplay flicmerge scrollmaker
 OBJS=*.o
 COMMON=palette.o sprite.o builtin_palettes.o rgbimage.o sprite_transform.o util.o
 
@@ -47,6 +47,9 @@ flicinfo: flicinfo.o flic.o $(COMMON)
 	$(LD) $(LDFLAGS) $^ -o $@
 
 flic2png: flic2png.o flic.o $(COMMON)
+	$(LD) $(LDFLAGS) $^ -o $@
+
+scrollmaker: scrollmaker.o flic.o anim.o $(COMMON)
 	$(LD) $(LDFLAGS) $^ -o $@
 
 flicmerge: flicmerge.o flic.o anim.o $(COMMON)
