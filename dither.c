@@ -8,139 +8,9 @@
 #include "palette.h"
 #include "globals.h"
 #include "rgbimage.h"
+#include "util.h"
 
-uint8_t clamp8bit(int val)
-{
-	if (val < 0)
-		return 0;
-	if (val > 255)
-		return 255;
-	return val;
-}
-
-uint8_t errdiff(uint8_t org, int error, int mult, int div)
-{
-	return clamp8bit(org + error * mult / div);
-}
-
-void distributeError(rgbimage_t *img, int x, int y, int e_r, int e_g, int e_b)
-{
-	uint8_t r,g,b;
-	int mult, div;
-
-	// Current pixel: #
-
-	// 1    - # 7
-	// 16   3 5 1
-	div = 16;
-
-	// 7
-	mult = 7;
-	getPixelRGBsafe(img, x+1, y, &r, &g, &b);
-	r = errdiff(r, e_r, mult, div);
-	g = errdiff(g, e_g, mult, div);
-	b = errdiff(b, e_b, mult, div);
-	setPixelRGBsafe(img, x+1, y, r, g, b);
-
-	// 3
-	mult = 3;
-	getPixelRGBsafe(img, x-1, y+1, &r, &g, &b);
-	r = errdiff(r, e_r, mult, div);
-	g = errdiff(g, e_g, mult, div);
-	b = errdiff(b, e_b, mult, div);
-	setPixelRGBsafe(img, x-1, y+1, r, g, b);
-
-	// 5
-	mult = 5;
-	getPixelRGBsafe(img, x, y+1, &r, &g, &b);
-	r = errdiff(r, e_r, mult, div);
-	g = errdiff(g, e_g, mult, div);
-	b = errdiff(b, e_b, mult, div);
-	setPixelRGBsafe(img, x, y+1, r, g, b);
-
-	// 5
-	mult = 1;
-	getPixelRGBsafe(img, x+1, y+1, &r, &g, &b);
-	r = errdiff(r, e_r, mult, div);
-	g = errdiff(g, e_g, mult, div);
-	b = errdiff(b, e_b, mult, div);
-	setPixelRGBsafe(img, x+1, y+1, r, g, b);
-
-
-
-}
-
-int ditherImage(rgbimage_t *img, palette_t *pal)
-{
-	int x, y;
-	pixel_t *pix;
-	int e_r, e_g, e_b;
-	int idx;
-
-	if ((pal->count == 0) || (pal->count > 256)) {
-		fprintf(stderr, "Bad palette color count: %d\n", pal->count);
-		return -1;
-	}
-
-	for (y=0; y<img->h; y++) {
-		for (x=0; x<img->w; x++) {
-			pix = getPixel(img, x, y);
-
-			idx = palette_findBestMatch(pal, pix->r, pix->g, pix->b, 0);
-
-			e_r = pix->r - pal->colors[idx].r;
-			e_g = pix->g - pal->colors[idx].g;
-			e_b = pix->b - pal->colors[idx].b;
-
-			pix->r = pal->colors[idx].r;
-			pix->g = pal->colors[idx].g;
-			pix->b = pal->colors[idx].b;
-
-			/*if ((pix->r > 200) || (pix->g > 128) || (pix->b) > 250) {
-				distributeError(img, x, y, e_r/3, e_g/2, e_b/6);
-			} else {
-			}*/
-
-			distributeError(img, x, y, e_r, e_g, e_b);
-
-		}
-	}
-
-	return 0;
-}
-
-static uint8_t qn(uint8_t i, int nshift)
-{
-	return i >> nshift;
-}
-
-static uint8_t qn8(uint8_t i, int nshift)
-{
-	return i * 0xff / (0xff >> nshift);
-}
-
-
-
-
-void quantizeRGBimage(rgbimage_t *img, int bits_per_component)
-{
-	int count = img->w * img->h;
-	int i;
-	int shift = 8-bits_per_component;
-
-	for (i=0; i<count; i++) {
-		img->pixels[i].r = qn(img->pixels[i].r, shift);
-		img->pixels[i].g = qn(img->pixels[i].g, shift);
-		img->pixels[i].b = qn(img->pixels[i].b, shift);
-	}
-
-	for (i=0; i<count; i++) {
-		img->pixels[i].r = qn8(img->pixels[i].r, shift);
-		img->pixels[i].g = qn8(img->pixels[i].g, shift);
-		img->pixels[i].b = qn8(img->pixels[i].b, shift);
-	}
-
-}
+#define DEFAULT_DITHER_ALGO	DITHERALGO_FLOYD_STEINBERG
 
 uint8_t fnGamma(uint8_t in, double val)
 {
@@ -438,6 +308,7 @@ enum {
 	OPT_MAKEPAL,
 	OPT_LOADPAL,
 	OPT_DITHER,
+	OPT_ALGO,
 };
 
 static struct option long_options[] = {
@@ -456,13 +327,22 @@ static struct option long_options[] = {
 	{ "makepal",	no_argument, 0, OPT_MAKEPAL },
 	{ "loadpal",	required_argument, 0, OPT_LOADPAL },
 	{ "dither",		no_argument, 0, OPT_DITHER },
+	{ "algo",		required_argument, 0, OPT_ALGO },
 	{ }
 };
 
 void printHelp(void)
 {
-	printf("Usage: ./dither [options]\n");
+	int i;
+	const char *name, *sname;
 
+	printf("Usage: ./dither [options]\n");
+	printf("\n");
+	printf("Summary:\n");
+	printf("  Build or load a palette, then dither an image using a specified\n");
+	printf("  algorithm\n");
+
+	printf("\nOptions:\n");
 	printf(" -h                 Print usage information\n");
 	printf(" -v                 Enable verbose mode\n");
 	printf(" -in file           Load image\n");
@@ -478,6 +358,14 @@ void printHelp(void)
 	printf(" -makepal           Build palette from current image (max 256 colors)\n");
 	printf(" -loadpal file      Load palette from file\n");
 	printf(" -dither            Dither the current using palette (-makepal or -loadpal)\n");
+	printf(" -algo name         Set the dithering algorithm to use.\n");
+	printf("                    (Default: %s)\n", getDitherAlgoShortName(DEFAULT_DITHER_ALGO));
+	printf("\nDithering algorithms:\n");
+	for (i=0; (name = getDitherAlgoName(i)); i++) {
+		// getDitherAlgoName returns NULL past last valid ID
+		sname = getDitherAlgoShortName(i);
+		printf("  %-17s %s\n", sname, name);
+	}
 }
 
 
@@ -491,6 +379,7 @@ int main(int argc, char **argv)
 	int val;
 	double vald;
 	palette_t refpal = { };
+	int ditheralgo = DEFAULT_DITHER_ALGO;
 
 	while ((opt = getopt_long_only(argc, argv, "hv", long_options, NULL)) != -1) {
 		switch(opt)
@@ -681,7 +570,15 @@ int main(int argc, char **argv)
 					return -1;
 				}
 
-				ditherImage(image_in, &refpal);
+				ditherImage(image_in, &refpal, ditheralgo);
+				break;
+
+			case OPT_ALGO:
+				ditheralgo = getDitherAlgoByShortName(optarg);
+				if (ditheralgo < 0) {
+					fprintf(stderr, "Unknown dithering algorithm\n");
+					return -1;
+				}
 				break;
 
 		}

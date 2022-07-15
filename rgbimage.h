@@ -33,6 +33,23 @@ void freeRGBimage(rgbimage_t *img);
 void printRGBimage(rgbimage_t *img);
 int pixelEqual(const pixel_t *a, const pixel_t *b);
 
+enum {
+	DITHERALGO_NONE = 0,
+	DITHERALGO_FLOYD_STEINBERG,
+	DITHERALGO_ERROR_DIFF_THRESHOLD,
+};
+
+// those will return NULL if the algo is invalid
+const char *getDitherAlgoName(uint8_t algo);
+const char *getDitherAlgoShortName(uint8_t algo);
+// returns algo ID if found, otherwise -1
+int getDitherAlgoByShortName(const char *sname);
+
+int ditherImage_none(rgbimage_t *img, palette_t *pal);
+int ditherImage_floyd_steinberg(rgbimage_t *img, palette_t *pal);
+int ditherImage(rgbimage_t *img, palette_t *pal, uint8_t algo);
+
+void quantizeRGBimage(rgbimage_t *img, int bits_per_component);
 
 
 #endif // _rgb_image_h__

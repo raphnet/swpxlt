@@ -5,6 +5,7 @@
 #include "rgbimage.h"
 #include "globals.h"
 #include "palette.h"
+#include "util.h"
 
 pixel_t *getPixel(rgbimage_t *img, int x, int y)
 {
@@ -380,4 +381,244 @@ int rgbi_savePNG_indexed(const char *out_filename, rgbimage_t *img, const palett
 
 	return 0;
 }
+
+static uint8_t errdiff(uint8_t org, int error, int mult, int div)
+{
+	return clamp8bit(org + error * mult / div);
+}
+
+static void distributeError(rgbimage_t *img, int x, int y, int e_r, int e_g, int e_b)
+{
+	uint8_t r=0,g=0,b=0;
+	int mult, div;
+
+	// Current pixel: #
+
+	// 1    - # 7
+	// 16   3 5 1
+	div = 16;
+
+	// 7
+	mult = 7;
+	getPixelRGBsafe(img, x+1, y, &r, &g, &b);
+	r = errdiff(r, e_r, mult, div);
+	g = errdiff(g, e_g, mult, div);
+	b = errdiff(b, e_b, mult, div);
+	setPixelRGBsafe(img, x+1, y, r, g, b);
+
+	// 3
+	mult = 3;
+	getPixelRGBsafe(img, x-1, y+1, &r, &g, &b);
+	r = errdiff(r, e_r, mult, div);
+	g = errdiff(g, e_g, mult, div);
+	b = errdiff(b, e_b, mult, div);
+	setPixelRGBsafe(img, x-1, y+1, r, g, b);
+
+	// 5
+	mult = 5;
+	getPixelRGBsafe(img, x, y+1, &r, &g, &b);
+	r = errdiff(r, e_r, mult, div);
+	g = errdiff(g, e_g, mult, div);
+	b = errdiff(b, e_b, mult, div);
+	setPixelRGBsafe(img, x, y+1, r, g, b);
+
+	// 5
+	mult = 1;
+	getPixelRGBsafe(img, x+1, y+1, &r, &g, &b);
+	r = errdiff(r, e_r, mult, div);
+	g = errdiff(g, e_g, mult, div);
+	b = errdiff(b, e_b, mult, div);
+	setPixelRGBsafe(img, x+1, y+1, r, g, b);
+}
+
+int ditherImage_none(rgbimage_t *img, palette_t *pal)
+{
+	int x, y;
+	pixel_t *pix;
+	int idx;
+
+	if ((pal->count == 0) || (pal->count > 256)) {
+		fprintf(stderr, "Bad palette color count: %d\n", pal->count);
+		return -1;
+	}
+
+	for (y=0; y<img->h; y++) {
+		for (x=0; x<img->w; x++) {
+			pix = getPixel(img, x, y);
+
+			idx = palette_findBestMatch(pal, pix->r, pix->g, pix->b, 0);
+
+			pix->r = pal->colors[idx].r;
+			pix->g = pal->colors[idx].g;
+			pix->b = pal->colors[idx].b;
+		}
+	}
+
+	return 0;
+}
+
+int ditherImage_err1(rgbimage_t *img, palette_t *pal)
+{
+	int x, y;
+	pixel_t *pix;
+	int e_r, e_g, e_b;
+	int idx;
+
+	if ((pal->count == 0) || (pal->count > 256)) {
+		fprintf(stderr, "Bad palette color count: %d\n", pal->count);
+		return -1;
+	}
+
+	for (y=0; y<img->h; y++) {
+		for (x=0; x<img->w; x++) {
+			pix = getPixel(img, x, y);
+
+			idx = palette_findBestMatch(pal, pix->r, pix->g, pix->b, 0);
+
+			e_r = pix->r - pal->colors[idx].r;
+			e_g = pix->g - pal->colors[idx].g;
+			e_b = pix->b - pal->colors[idx].b;
+
+			pix->r = pal->colors[idx].r;
+			pix->g = pal->colors[idx].g;
+			pix->b = pal->colors[idx].b;
+
+			// an attempt to generate less noise - mixed results...
+			if ((pix->r > 200) || (pix->g > 128) || (pix->b) > 250) {
+				distributeError(img, x, y, e_r/3, e_g/2, e_b/6);
+			} else {
+			}
+
+		}
+	}
+
+	return 0;
+}
+
+
+int ditherImage_floyd_steinberg(rgbimage_t *img, palette_t *pal)
+{
+	int x, y;
+	pixel_t *pix;
+	int e_r, e_g, e_b;
+	int idx;
+
+	if ((pal->count == 0) || (pal->count > 256)) {
+		fprintf(stderr, "Bad palette color count: %d\n", pal->count);
+		return -1;
+	}
+
+	for (y=0; y<img->h; y++) {
+		for (x=0; x<img->w; x++) {
+			pix = getPixel(img, x, y);
+
+			idx = palette_findBestMatch(pal, pix->r, pix->g, pix->b, 0);
+
+			e_r = pix->r - pal->colors[idx].r;
+			e_g = pix->g - pal->colors[idx].g;
+			e_b = pix->b - pal->colors[idx].b;
+
+			pix->r = pal->colors[idx].r;
+			pix->g = pal->colors[idx].g;
+			pix->b = pal->colors[idx].b;
+
+			/*if ((pix->r > 200) || (pix->g > 128) || (pix->b) > 250) {
+				distributeError(img, x, y, e_r/3, e_g/2, e_b/6);
+			} else {
+			}*/
+
+			distributeError(img, x, y, e_r, e_g, e_b);
+
+		}
+	}
+
+	return 0;
+}
+
+struct ditherAlgo {
+	const char *shortname;
+	const char *name;
+	int (*algoFunc)(rgbimage_t *img, palette_t *pal);
+};
+
+static struct ditherAlgo ditherAlgos[] = {
+	[DITHERALGO_NONE] = {
+		"nop",   "None - best match", ditherImage_none
+	},
+	[DITHERALGO_FLOYD_STEINBERG] = {
+		"fs",    "Floyd-Steinberg error diffusion (standard)", ditherImage_floyd_steinberg
+	},
+	[DITHERALGO_ERROR_DIFF_THRESHOLD] = {
+		"err1",    "Error diffusion with threshold (only dither large errors)", ditherImage_err1
+	},
+
+};
+
+const char *getDitherAlgoName(uint8_t algo)
+{
+	if (algo >= ARRAY_SIZE(ditherAlgos)) {
+		return NULL;
+	}
+	return ditherAlgos[algo].name;
+}
+
+const char *getDitherAlgoShortName(uint8_t algo)
+{
+	if (algo >= ARRAY_SIZE(ditherAlgos)) {
+		return NULL;
+	}
+	return ditherAlgos[algo].shortname;
+}
+
+int getDitherAlgoByShortName(const char *sname)
+{
+	int i;
+	for (i=0; i<ARRAY_SIZE(ditherAlgos); i++) {
+		if (0 == strcasecmp(ditherAlgos[i].shortname, sname)) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+int ditherImage(rgbimage_t *img, palette_t *pal, uint8_t algo)
+{
+	if (algo >= ARRAY_SIZE(ditherAlgos)) {
+		fprintf(stderr, "Invalid dithering algorithm id (%d)\n", algo);
+		return -1;
+	}
+
+	return ditherAlgos[algo].algoFunc(img, pal);
+}
+
+static uint8_t qn(uint8_t i, int nshift)
+{
+	return i >> nshift;
+}
+
+static uint8_t qn8(uint8_t i, int nshift)
+{
+	return i * 0xff / (0xff >> nshift);
+}
+
+void quantizeRGBimage(rgbimage_t *img, int bits_per_component)
+{
+	int count = img->w * img->h;
+	int i;
+	int shift = 8-bits_per_component;
+
+	for (i=0; i<count; i++) {
+		img->pixels[i].r = qn(img->pixels[i].r, shift);
+		img->pixels[i].g = qn(img->pixels[i].g, shift);
+		img->pixels[i].b = qn(img->pixels[i].b, shift);
+	}
+
+	for (i=0; i<count; i++) {
+		img->pixels[i].r = qn8(img->pixels[i].r, shift);
+		img->pixels[i].g = qn8(img->pixels[i].g, shift);
+		img->pixels[i].b = qn8(img->pixels[i].b, shift);
+	}
+
+}
+
 

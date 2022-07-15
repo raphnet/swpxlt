@@ -3,6 +3,15 @@
 import PySimpleGUI as sg
 import sys, subprocess, os
 
+
+# todo : Run dither once to extract this list at runtime
+algoargs = {
+    "nop": "None",
+    "fs": "Floyd-Steinberg",
+    "err1": "Diffuse large errors only"
+}
+
+
 options = [
 ]
 
@@ -32,6 +41,8 @@ inputside = [
     [ sg.Text("Palette generation options:") ],
     [ sg.Text("Quantize depth: "), sg.Spin(values=[1,2,3,4,5,6,7,8], initial_value=4, size=(4,1), key="-BITDEPTH-", enable_events=True), sg.Text("(bits per color)") ],
     [ sg.Text("Maximum colors: "), sg.Spin(values=[i for i in range(1,256)], initial_value=256, size=(4,1), key="-MAXCOLORS-", enable_events=True) ],
+    [ sg.Text("Dithering algorithm: "), sg.Combo(values=list(algoargs.values()), default_value="Floyd-Steinberg", key="-ALGO-" ) ],
+    #[ sg.Text("Dithering algorithm: "), sg.Combo(values=["None","Floyd-Steinberg","Diffuse large errors only" ], default_value="Floyd-Steinberg", key="-ALGO-" ) ],
 
     [ sg.HSeparator() ],
 
@@ -85,13 +96,18 @@ while True:
 
     #print("Event: ", event)
 
-    autoUpdate = event in [ "-GAIN-","-PREBIAS-","-POSTBIAS-","-BITDEPTH-","-MAXCOLORS-","-GAMMA-" ]
+    autoUpdate = event in [ "-GAIN-","-PREBIAS-","-POSTBIAS-","-BITDEPTH-","-MAXCOLORS-","-GAMMA-","-ALGO-" ]
 
     if event == "-APPLY-" or autoUpdate:
         gain = str(values["-GAIN-"]/100.0)
         prebias = str(values["-PREBIAS-"])
         postbias = str(values["-POSTBIAS-"])
         gamma = str(values["-GAMMA-"])
+        algo = str(values["-ALGO-"])
+
+
+        idx = list(algoargs.values()).index(algo)
+        algo = list(algoargs.keys())[idx]
 
         command = [
             ditherTool,
@@ -116,6 +132,7 @@ while True:
             "-bias", postbias,
 
             # Now dither using palette
+            "-algo", algo,
             "-dither",
 
             # And output the result
