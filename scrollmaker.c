@@ -37,22 +37,21 @@ static struct option long_options[] = {
 
 static void printHelp()
 {
-	printf("Usage: ./flicmerge [options] files...\n");
-	printf("\nflicmerge reads 1 or more files (FLC/FLI/PNG) and outputs a single\n");
-	printf(".FLC file.\n");
+	printf("Usage: ./scrollmaker [options]\n");
+	printf("\nScrollmaker makes a looping animation using\n");
+	printf("a combination of layers moving at different speeds.\n");
 
 	printf("\nGeneral / Global options:\n");
-	printf(" -h                      Print usage information\n");
-	printf(" -v                      Enable verbose output\n");
-	printf(" -width w            Output width\n");
-	printf(" -height h           Output height\n");
-	printf(" -o, -out filename.flc   Output file. Default: %s\n", DEFAULT_OUTPUT_FILE);
-	printf(" -fps value              Output frame rate\n");
+	printf("   -h                      Print usage information\n");
+	printf("   -v                      Enable verbose output\n");
+	printf("   -width w            Output width\n");
+	printf("   -height h           Output height\n");
+	printf("   -o, -out filename.flc   Output file. Default: %s\n", DEFAULT_OUTPUT_FILE);
+	printf("   -fps value              Output frame rate\n");
 
 	printf("\nOptions for next layer:\n");
-	printf(" -spdx speed              Pixels-per-frame horizontal movement for layer\n");
-
-	printf(" -addlayer layerfile      Add layer\n");
+	printf("   -spdx speed              Pixels-per-frame horizontal movement for layer\n");
+	printf("   -addlayer layerfile      Add layer\n");
 }
 
 struct layer {
@@ -142,12 +141,9 @@ int main(int argc, char **argv)
 {
 	int opt;
 	char *e;
-	const char *infilename;
 	const char *outfilename = DEFAULT_OUTPUT_FILE;
 	FlicFile *outflic = NULL;
-	FlicFile *flic = NULL;
 	sprite_t *img = NULL;
-	animation_t *anim = NULL;
 	int w = DEFAULT_W, h = DEFAULT_H;
 	int fps = 30;
 	int next_layer_speed = 0;
