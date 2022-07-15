@@ -36,11 +36,13 @@ sprite_t *sprite_loadGIF(const char *in_filename, int n_expected_colors, uint32_
 sprite_t *sprite_load(const char *in_filename, int n_expected_colors, uint32_t flags);
 
 void printSprite(sprite_t *spr);
+int sprite_setPixelsStrip(struct sprite *spr, int x, int y, uint8_t *data, int count);
 void sprite_setPixel(sprite_t *spr, int x, int y, int value);
 void sprite_setPixelSafe(sprite_t *spr, int x, int y, int value);
 int sprite_getPixel(const sprite_t *spr, int x, int y);
 int sprite_getPixelSafe(const sprite_t *spr, int x, int y);
 int sprite_getPixelSafeExtend(const sprite_t *spr, int x, int y);
+void sprite_fill(struct sprite *spr, int color);
 int sprite_fillRect(struct sprite *spr, int x, int y, int w, int h, int color);
 
 

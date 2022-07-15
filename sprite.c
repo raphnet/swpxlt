@@ -695,16 +695,48 @@ void sprite_copyRect(const sprite_t *src, const spriterect_t *src_rect, sprite_t
 		dst_y = 0;
 	}
 
-	printf("Copyrect loop: %d x %d\n", w,h);
+//	printf("Copyrect loop: %d x %d\n", w,h);
 
-	for (y=0; y<h; y++) {
-		for (x=0; x<w; x++) {
-			pixel = sprite_getPixel(src, x + src_x, y + src_y);
-			sprite_setPixel(dst, x + dst_x, y + dst_y, pixel);
+	// Note: This really is not optimised!
+
+	if (src->flags & SPRITE_FLAG_USE_TRANSPARENT_COLOR)
+	{
+		// Blitting with a transparent color source
+		for (y=0; y<h; y++) {
+			for (x=0; x<w; x++) {
+				pixel = sprite_getPixel(src, x + src_x, y + src_y);
+				if (pixel == src->transparent_color)
+					continue;
+				sprite_setPixel(dst, x + dst_x, y + dst_y, pixel);
+			}
+		}
+	}
+	else if (src->flags & SPRITE_FLAG_OPAQUE)
+	{
+		// Blitting from fully opaque sprite
+		for (y=0; y<h; y++) {
+			for (x=0; x<w; x++) {
+				pixel = sprite_getPixel(src, x + src_x, y + src_y);
+				sprite_setPixel(dst, x + dst_x, y + dst_y, pixel);
+			}
+		}
+	} else {
+		// Blitting using mask
+		for (y=0; y<h; y++) {
+			for (x=0; x<w; x++) {
+				if (!sprite_getPixelMask(src, x, y)) {
+					pixel = sprite_getPixel(src, x + src_x, y + src_y);
+					sprite_setPixel(dst, x + dst_x, y + dst_y, pixel);
+				}
+			}
 		}
 	}
 }
 
+void sprite_fill(struct sprite *spr, int color)
+{
+	memset(spr->pixels, color, spr->w * spr->h);
+}
 
 int sprite_fillRect(struct sprite *spr, int x, int y, int w, int h, int color)
 {
@@ -720,5 +752,31 @@ int sprite_fillRect(struct sprite *spr, int x, int y, int w, int h, int color)
 
 	return 0;
 }
+
+int sprite_setPixelsStrip(struct sprite *spr, int x, int y, uint8_t *data, int count)
+{
+	if ((y < 0) || (y >= spr->h)) {
+		return -1;
+	}
+
+	if (x < 0) {
+		// skip out of range pixels
+		data += -x;
+		// shorten count
+		count += x;
+		// start at the beginning of the row
+		x = 0;
+	}
+
+	// strip was fully outside the area
+	if (count < 1) {
+		return -1;
+	}
+
+	memcpy(spr->pixels + y * spr->w + x, data, count);
+
+	return 0;
+}
+
 
 

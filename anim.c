@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
 #include "anim.h"
 #include "flic.h"
@@ -88,13 +87,14 @@ static int anim_addFramesFromGIF(animation_t *anim, const char *filename)
 
 		// Disposal of previous frame
 		if (disposal == DISPOSE_BACKGROUND) {
-			memset(sprite->pixels, gf->SBackGroundColor, sprite->w * sprite->h);
+			sprite_fill(sprite, gf->SBackGroundColor);
 		} else if (disposal == DISPOSE_PREVIOUS) {
 			if (j == 0) {
 				fprintf(stderr, "Warning: Unexpected GIF image disposal method. Cannot restore to previous contents on the first frame! Filling with background color...");
-				memset(sprite->pixels, gf->SBackGroundColor, sprite->w * sprite->h);
+				sprite_fill(sprite, gf->SBackGroundColor);
 			} else {
-				memcpy(sprite->pixels, anim->frames[anim->num_frames-1]->pixels, sprite->w * sprite->h);
+				sprite_copyRect(anim->frames[anim->num_frames-1], NULL, sprite, NULL);
+
 			}
 		}
 
@@ -137,7 +137,8 @@ static int anim_addFramesFromGIF(animation_t *anim, const char *filename)
 
 		// Copy image
 		for (i=0,y = gf->SavedImages[j].ImageDesc.Top; y < gf->SavedImages[j].ImageDesc.Top + gf->SavedImages[0].ImageDesc.Height; y++,i++) {
-			memcpy(sprite->pixels + gf->SavedImages[j].ImageDesc.Left + y * sprite->w,
+			sprite_setPixelsStrip(sprite,
+					gf->SavedImages[j].ImageDesc.Left, y,
 					gf->SavedImages[j].RasterBits + gf->SavedImages[j].ImageDesc.Width * i,
 					gf->SavedImages[j].ImageDesc.Width);
 		}
