@@ -108,10 +108,11 @@ Using the -x option, paltool can display the palette directly in your terminal i
 
 At this time, the resulting palette data can be exported to the following formats (selected by option -f):
 
- - VGA format (6 bit) in nasm format
+ - VGA format (6 bit) in nasm syntax
  - PNG file format (8-bit) with swatches
  - Autodesk Animator COL file (256 entries / raw 768 bytes)
  - Autodesk Animator Pro COL file (Header + (n * 3 bytes))
+ - SMS format: WLA-DX syntax or Binary (16 bytes)
 
 For instance, to load the palette from a PNG file and export it in .COL (animator) format:
 

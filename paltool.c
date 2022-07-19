@@ -35,11 +35,13 @@ void printHelp(void)
 	printf("                   Offset auto-increments after each set operation.\n");
 	printf(" -B name           Load a built-in palette\n");
 	printf("\n");
-	printf("Supported ouput formats:\n");
-	printf("   vga_asm         VGA format (6 bit) in nasm format\n");
+	printf("Supported output formats:\n");
+	printf("   vga_asm         VGA format (6 bit) in nasm syntax\n");
 	printf("   png             PNG file format (8-bit) with swatches\n");
 	printf("   animator        Autodesk Animator COL file (256 entries / raw 768 bytes)\n");
 	printf("   animator_pro    Autodesk Animator Pro COL file (Header + (n*3 bytes)\n");
+	printf("   sms_wladx       Master system format, WLA-DX syntax\n");
+	printf("   sms_bin         Master system format, binary (16 bytes)\n");
 	printf("\n");
 	printf("Supported input formats (auto detected):\n");
 	printf("   gimp            Gimp palette (.GPL)\n");
@@ -55,24 +57,6 @@ void printHelp(void)
 
 		printf("   %-16s%s\n", getBuiltinPaletteName(i), getBuiltinPaletteDescription(i));
 	}
-}
-
-enum {
-	OUTPUT_FORMAT_NONE = 0,
-	OUTPUT_FORMAT_VGAASM,
-	OUTPUT_FORMAT_PNG,
-	OUTPUT_FORMAT_ANIMATOR,
-	OUTPUT_FORMAT_ANIMATOR_PRO,
-};
-
-
-int parseOutputFormat(const char *arg)
-{
-	if (0 == strcasecmp(arg, "vga_asm")) { return OUTPUT_FORMAT_VGAASM; }
-	if (0 == strcasecmp(arg, "png")) { return OUTPUT_FORMAT_PNG; }
-	if (0 == strcasecmp(arg, "animator")) { return OUTPUT_FORMAT_ANIMATOR; }
-	if (0 == strcasecmp(arg, "animator_pro")) { return OUTPUT_FORMAT_ANIMATOR_PRO; }
-	return -1;
 }
 
 #define MODE_APPEND	0
@@ -171,79 +155,6 @@ int apply_effect_darken(palette_t *pal, int source_index, int dest_index, int le
 	return 0;
 }
 
-// https://www.fileformat.info/format/animator-col/corion.htm
-int output_animator_col(FILE *fptr, palette_t *pal)
-{
-	int i;
-	uint8_t tmp[3];
-
-	for (i=0; i<256; i++) {
-		if (i < pal->count) {
-			tmp[0] = pal->colors[i].r;
-			tmp[1] = pal->colors[i].g;
-			tmp[2] = pal->colors[i].b;
-		} else {
-			memset(tmp, 0, 3);
-		}
-
-		fwrite(tmp, 3, 1, fptr);
-	}
-
-	return 0;
-}
-
-// https://www.fileformat.info/format/animator-col/corion.htm
-int output_animator_pro_col(FILE *fptr, palette_t *pal)
-{
-	int i;
-	uint8_t header[8];
-	uint8_t tmp[3];
-	int size;
-
-	size = 8 + pal->count * 3;
-
-	//  1 dword  File size, including this header
-	header[0] = size;
-	header[1] = size >> 8;
-	header[2] = 0;
-	header[3] = 0;
-	// 1 word   ID=0B123h
-	header[4] = 0x23;
-	header[5] = 0xB1;
-	// 1 word   Version, currently 0
-	header[6] = 0x00;
-	header[7] = 0x00;
-
-	fwrite(header, 8, 1, fptr);
-
-	for (i=0; i<pal->count; i++) {
-		tmp[0] = pal->colors[i].r;
-		tmp[1] = pal->colors[i].g;
-		tmp[2] = pal->colors[i].b;
-		fwrite(tmp, 3, 1, fptr);
-	}
-
-	return 0;
-}
-
-
-int output_vgaasm(FILE *fptr, palette_t *pal, const char *symbol_name)
-{
-	int i;
-
-	fprintf(fptr, "%s:\n", symbol_name);
-	for (i=0; i<pal->count; i++) {
-		fprintf(fptr, "	db %2d,%2d,%2d ; idx %d\n",
-					pal->colors[i].r / 4,
-					pal->colors[i].g / 4,
-					pal->colors[i].b / 4,
-					i);
-	}
-	fprintf(fptr, "%s_end:\n", symbol_name);
-	fprintf(fptr, "%%define %s_size %d\n", symbol_name, pal->count);
-
-	return 0;
-}
 
 int main(int argc, char **argv)
 {
@@ -252,7 +163,7 @@ int main(int argc, char **argv)
 	int percent = 100;
 	int length = 0;
 	int offset = 0, input_offset = 0;
-	int output_format = OUTPUT_FORMAT_NONE;
+	int output_format = PALETTE_FORMAT_NONE;
 	const char *output_filename = "-";
 	const char *symbol_name = "palette";
 	FILE *out_fptr;
@@ -290,8 +201,8 @@ int main(int argc, char **argv)
 				output_filename = optarg;
 				break;
 			case 'f':
-				output_format = parseOutputFormat(optarg);
-				if (output_format < 0) {
+				output_format = palette_parseOutputFormat(optarg);
+				if (output_format == PALETTE_FORMAT_NONE) {
 					fprintf(stderr, "Unsupported or invalid output format\n");
 					return -1;
 				}
@@ -353,14 +264,14 @@ int main(int argc, char **argv)
 	}
 
 
-	if (output_format == OUTPUT_FORMAT_NONE) {
+	if (output_format == PALETTE_FORMAT_NONE) {
 		if (printpal_colored) {
 			palette_print_24bit(&palette);
 		} else {
 			palette_print(&palette);
 		}
 	}
-	else if (output_format == OUTPUT_FORMAT_PNG) {
+	else if (output_format == PALETTE_FORMAT_PNG) {
 		sprite_t *palimage;
 		int i,x,y;
 
@@ -393,18 +304,7 @@ int main(int argc, char **argv)
 			return -1;
 		}
 
-		switch (output_format)
-		{
-			case OUTPUT_FORMAT_VGAASM:
-				output_vgaasm(out_fptr, &palette, symbol_name);
-				break;
-			case OUTPUT_FORMAT_ANIMATOR:
-				output_animator_col(out_fptr, &palette);
-				break;
-			case OUTPUT_FORMAT_ANIMATOR_PRO:
-				output_animator_pro_col(out_fptr, &palette);
-				break;
-		}
+		palette_saveFPTR(out_fptr, &palette, output_format, symbol_name);
 
 		if (out_fptr != stdout) {
 			fclose(out_fptr);
