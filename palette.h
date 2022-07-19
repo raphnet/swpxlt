@@ -58,6 +58,7 @@ int palette_output_animator_pro_col(FILE *fptr, palette_t *pal);
 int palette_output_animator_col(FILE *fptr, palette_t *pal);
 int palette_output_vgaasm(FILE *fptr, palette_t *pal, const char *symbol_name);
 int palette_saveFPTR(FILE *outfptr, palette_t *src, uint8_t format, const char *name);
+int palette_save(const char *outfilename, palette_t *src, uint8_t format, const char *name);
 
 int palette_generateRemap(const palette_t *srcpal, const palette_t *dstpal, palremap_lut_t *dst);
 int palettes_match(const palette_t *pal1, const palette_t *pal2);

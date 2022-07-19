@@ -547,6 +547,28 @@ int palette_saveFPTR(FILE *outfptr, palette_t *src, uint8_t format, const char *
 	return -1;
 }
 
+int palette_save(const char *outfilename, palette_t *src, uint8_t format, const char *name)
+{
+	FILE *outfptr;
+	char *mode = "wb";
+	int res;
+
+	if ((format == PALETTE_FORMAT_SMS_WLADX) || (format == PALETTE_FORMAT_VGAASM)) {
+		mode = "w";
+	}
+
+	outfptr = fopen(outfilename, mode);
+	if (!outfptr) {
+		perror(outfilename);
+		return -1;
+	}
+
+	res = palette_saveFPTR(outfptr, src, format, name);
+
+	fclose(outfptr);
+
+	return res;
+}
 int palette_parseOutputFormat(const char *arg)
 {
 	if (0 == strcasecmp(arg, "vga_asm")) { return PALETTE_FORMAT_VGAASM; }
