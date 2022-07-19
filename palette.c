@@ -412,5 +412,93 @@ int palette_compareColorsEuclidian(const palette_t *pal, int color1, int color2)
 	total += abs(dist);
 
 	return total;
-
 }
+
+int palette_output_vgaasm(FILE *fptr, palette_t *pal, const char *symbol_name)
+{
+	int i;
+
+	fprintf(fptr, "%s:\n", symbol_name);
+	for (i=0; i<pal->count; i++) {
+		fprintf(fptr, "	db %2d,%2d,%2d ; idx %d\n",
+					pal->colors[i].r / 4,
+					pal->colors[i].g / 4,
+					pal->colors[i].b / 4,
+					i);
+	}
+	fprintf(fptr, "%s_end:\n", symbol_name);
+	fprintf(fptr, "%%define %s_size %d\n", symbol_name, pal->count);
+
+	return 0;
+}
+
+// https://www.fileformat.info/format/animator-col/corion.htm
+int palette_output_animator_pro_col(FILE *fptr, palette_t *pal)
+{
+	int i;
+	uint8_t header[8];
+	uint8_t tmp[3];
+	int size;
+
+	size = 8 + pal->count * 3;
+
+	//  1 dword  File size, including this header
+	header[0] = size;
+	header[1] = size >> 8;
+	header[2] = 0;
+	header[3] = 0;
+	// 1 word   ID=0B123h
+	header[4] = 0x23;
+	header[5] = 0xB1;
+	// 1 word   Version, currently 0
+	header[6] = 0x00;
+	header[7] = 0x00;
+
+	fwrite(header, 8, 1, fptr);
+
+	for (i=0; i<pal->count; i++) {
+		tmp[0] = pal->colors[i].r;
+		tmp[1] = pal->colors[i].g;
+		tmp[2] = pal->colors[i].b;
+		fwrite(tmp, 3, 1, fptr);
+	}
+
+	return 0;
+}
+
+// https://www.fileformat.info/format/animator-col/corion.htm
+int palette_output_animator_col(FILE *fptr, palette_t *pal)
+{
+	int i;
+	uint8_t tmp[3];
+
+	for (i=0; i<256; i++) {
+		if (i < pal->count) {
+			tmp[0] = pal->colors[i].r;
+			tmp[1] = pal->colors[i].g;
+			tmp[2] = pal->colors[i].b;
+		} else {
+			memset(tmp, 0, 3);
+		}
+
+		fwrite(tmp, 3, 1, fptr);
+	}
+
+	return 0;
+}
+
+int palette_saveFPTR(FILE *outfptr, palette_t *src, uint8_t format, const char *name)
+{
+	switch (format)
+	{
+		case PALETTE_FORMAT_VGAASM:
+			return palette_output_vgaasm(outfptr, src, name);
+		case PALETTE_FORMAT_ANIMATOR:
+			return palette_output_animator_col(outfptr, src);
+		case PALETTE_FORMAT_ANIMATOR_PRO:
+			return palette_output_animator_pro_col(outfptr, src);
+	}
+
+	return -1;
+}
+

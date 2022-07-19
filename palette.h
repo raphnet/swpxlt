@@ -24,6 +24,19 @@ enum {
 	COLORMATCH_METHOD_DEFAULT = 0,
 };
 
+enum {
+	PALETTE_FORMAT_NONE = 0,
+	PALETTE_FORMAT_VGAASM,
+	PALETTE_FORMAT_PNG,
+	PALETTE_FORMAT_ANIMATOR,
+	PALETTE_FORMAT_ANIMATOR_PRO,
+};
+
+int palette_getOutputFormatById(int id);
+const char *palette_getFormatName(int format);
+int palette_canWriteFormat(int format);
+int palette_canReadFormat(int format);
+
 int palette_findBestMatch(const palette_t *pal, int r, int g, int b, int method);
 void palette_setColor(palette_t * pal, uint8_t index, int r, int g, int b);
 void palette_addColor(palette_t * pal, int r, int g, int b);
@@ -38,6 +51,11 @@ int palette_loadJascPalette(const char *filename, palette_t *dst);
 int palette_loadFromPng(const char *filename, palette_t *dst);
 
 int palette_load(const char *filename, palette_t *dst);
+
+int palette_output_animator_pro_col(FILE *fptr, palette_t *pal);
+int palette_output_animator_col(FILE *fptr, palette_t *pal);
+int palette_output_vgaasm(FILE *fptr, palette_t *pal, const char *symbol_name);
+int palette_saveFPTR(FILE *outfptr, palette_t *src, uint8_t format, const char *name);
 
 int palette_generateRemap(const palette_t *srcpal, const palette_t *dstpal, palremap_lut_t *dst);
 int palettes_match(const palette_t *pal1, const palette_t *pal2);
