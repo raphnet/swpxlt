@@ -414,6 +414,47 @@ int palette_compareColorsEuclidian(const palette_t *pal, int color1, int color2)
 	return total;
 }
 
+int palette_output_sms_bin(FILE *fptr, palette_t *pal)
+{
+	int i;
+	uint8_t color;
+
+	for (i=0; i<pal->count; i++) {
+		color = (pal->colors[i].b >> 6) << 4;
+		color |= (pal->colors[i].g >> 6) << 2;
+		color |= (pal->colors[i].r >> 6) << 0;
+
+		fwrite(&color, 1, 1, fptr);
+	}
+
+	return 0;
+}
+
+
+int palette_output_sms_wladx(FILE *fptr, palette_t *pal, const char *symbol_name)
+{
+	int i;
+	uint8_t color;
+
+	fprintf(fptr, "%s:\n", symbol_name);
+	for (i=0; i<pal->count; i++) {
+		color = (pal->colors[i].b >> 6) << 4;
+		color |= (pal->colors[i].g >> 6) << 2;
+		color |= (pal->colors[i].r >> 6) << 0;
+
+		fprintf(fptr, ".db $%02x ; idx %d, rgb=%02x%02x%02x\n",
+					color,
+					pal->colors[i].r,
+					pal->colors[i].g,
+					pal->colors[i].b,
+					i);
+	}
+	fprintf(fptr, "%s_end:\n", symbol_name);
+
+	return 0;
+}
+
+
 int palette_output_vgaasm(FILE *fptr, palette_t *pal, const char *symbol_name)
 {
 	int i;
@@ -491,6 +532,10 @@ int palette_saveFPTR(FILE *outfptr, palette_t *src, uint8_t format, const char *
 {
 	switch (format)
 	{
+		case PALETTE_FORMAT_SMS_BIN:
+			return palette_output_sms_bin(outfptr, src);
+		case PALETTE_FORMAT_SMS_WLADX:
+			return palette_output_sms_wladx(outfptr, src, name);
 		case PALETTE_FORMAT_VGAASM:
 			return palette_output_vgaasm(outfptr, src, name);
 		case PALETTE_FORMAT_ANIMATOR:

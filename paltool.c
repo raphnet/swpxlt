@@ -36,10 +36,12 @@ void printHelp(void)
 	printf(" -B name           Load a built-in palette\n");
 	printf("\n");
 	printf("Supported output formats:\n");
-	printf("   vga_asm         VGA format (6 bit) in nasm format\n");
+	printf("   vga_asm         VGA format (6 bit) in nasm syntax\n");
 	printf("   png             PNG file format (8-bit) with swatches\n");
 	printf("   animator        Autodesk Animator COL file (256 entries / raw 768 bytes)\n");
 	printf("   animator_pro    Autodesk Animator Pro COL file (Header + (n*3 bytes)\n");
+	printf("   sms_wladx       Master system format, WLA-DX syntax\n");
+	printf("   sms_bin         Master system format, binary (16 bytes)\n");
 	printf("\n");
 	printf("Supported input formats (auto detected):\n");
 	printf("   gimp            Gimp palette (.GPL)\n");

@@ -30,6 +30,8 @@ enum {
 	PALETTE_FORMAT_PNG,
 	PALETTE_FORMAT_ANIMATOR,
 	PALETTE_FORMAT_ANIMATOR_PRO,
+	PALETTE_FORMAT_SMS_WLADX,
+	PALETTE_FORMAT_SMS_BIN,
 };
 
 // returns PALETTE_FORMAT_NONE if unknown
@@ -50,6 +52,8 @@ int palette_loadFromPng(const char *filename, palette_t *dst);
 
 int palette_load(const char *filename, palette_t *dst);
 
+int palette_output_sms_bin(FILE *fptr, palette_t *pal);
+int palette_output_sms_wladx(FILE *fptr, palette_t *pal, const char *symbol_name);
 int palette_output_animator_pro_col(FILE *fptr, palette_t *pal);
 int palette_output_animator_col(FILE *fptr, palette_t *pal);
 int palette_output_vgaasm(FILE *fptr, palette_t *pal, const char *symbol_name);
