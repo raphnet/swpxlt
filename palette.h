@@ -32,10 +32,8 @@ enum {
 	PALETTE_FORMAT_ANIMATOR_PRO,
 };
 
-int palette_getOutputFormatById(int id);
-const char *palette_getFormatName(int format);
-int palette_canWriteFormat(int format);
-int palette_canReadFormat(int format);
+// returns PALETTE_FORMAT_NONE if unknown
+int palette_parseOutputFormat(const char *arg);
 
 int palette_findBestMatch(const palette_t *pal, int r, int g, int b, int method);
 void palette_setColor(palette_t * pal, uint8_t index, int r, int g, int b);

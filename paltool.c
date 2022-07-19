@@ -57,16 +57,6 @@ void printHelp(void)
 	}
 }
 
-
-int parseOutputFormat(const char *arg)
-{
-	if (0 == strcasecmp(arg, "vga_asm")) { return PALETTE_FORMAT_VGAASM; }
-	if (0 == strcasecmp(arg, "png")) { return PALETTE_FORMAT_PNG; }
-	if (0 == strcasecmp(arg, "animator")) { return PALETTE_FORMAT_ANIMATOR; }
-	if (0 == strcasecmp(arg, "animator_pro")) { return PALETTE_FORMAT_ANIMATOR_PRO; }
-	return -1;
-}
-
 #define MODE_APPEND	0
 #define MODE_OFFSET 1
 
@@ -209,8 +199,8 @@ int main(int argc, char **argv)
 				output_filename = optarg;
 				break;
 			case 'f':
-				output_format = parseOutputFormat(optarg);
-				if (output_format < 0) {
+				output_format = palette_parseOutputFormat(optarg);
+				if (output_format == PALETTE_FORMAT_NONE) {
 					fprintf(stderr, "Unsupported or invalid output format\n");
 					return -1;
 				}

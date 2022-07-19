@@ -502,3 +502,13 @@ int palette_saveFPTR(FILE *outfptr, palette_t *src, uint8_t format, const char *
 	return -1;
 }
 
+int palette_parseOutputFormat(const char *arg)
+{
+	if (0 == strcasecmp(arg, "vga_asm")) { return PALETTE_FORMAT_VGAASM; }
+	if (0 == strcasecmp(arg, "png")) { return PALETTE_FORMAT_PNG; }
+	if (0 == strcasecmp(arg, "animator")) { return PALETTE_FORMAT_ANIMATOR; }
+	if (0 == strcasecmp(arg, "animator_pro")) { return PALETTE_FORMAT_ANIMATOR_PRO; }
+	if (0 == strcasecmp(arg, "sms_wladx")) { return PALETTE_FORMAT_SMS_WLADX; }
+	if (0 == strcasecmp(arg, "sms_bin")) { return PALETTE_FORMAT_SMS_BIN; }
+	return PALETTE_FORMAT_NONE;
+}
