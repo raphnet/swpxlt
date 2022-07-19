@@ -381,3 +381,36 @@ int palettes_match(const palette_t *pal1, const palette_t *pal2)
 	return 1;
 }
 
+int palette_compareColorsManhattan(const palette_t *pal, int color1, int color2)
+{
+	int total = 0, dist;
+
+	dist = pal->colors[color1].r - pal->colors[color2].r;
+	total += abs(dist);
+	dist = pal->colors[color1].g - pal->colors[color2].g;
+	total += abs(dist);
+	dist = pal->colors[color1].b - pal->colors[color2].b;
+	total += abs(dist);
+
+	return total;
+}
+
+int palette_compareColorsEuclidian(const palette_t *pal, int color1, int color2)
+{
+	int total = 0, dist;
+
+	dist = pal->colors[color1].r - pal->colors[color2].r;
+	dist = dist*dist;
+	total += abs(dist);
+
+	dist = pal->colors[color1].g - pal->colors[color2].g;
+	dist = dist*dist;
+	total += abs(dist);
+
+	dist = pal->colors[color1].b - pal->colors[color2].b;
+	dist = dist*dist;
+	total += abs(dist);
+
+	return total;
+
+}

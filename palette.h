@@ -30,6 +30,9 @@ void palette_addColor(palette_t * pal, int r, int g, int b);
 int palette_findColor(const palette_t *pal, int r, int g, int b);
 void palette_clear(palette_t * pal);
 
+int palette_compareColorsManhattan(const palette_t *pal, int color1, int color2);
+int palette_compareColorsEuclidian(const palette_t *pal, int color1, int color2);
+
 int palette_loadGimpPalette(const char *filename, palette_t *dst);
 int palette_loadJascPalette(const char *filename, palette_t *dst);
 int palette_loadFromPng(const char *filename, palette_t *dst);
