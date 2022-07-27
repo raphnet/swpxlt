@@ -54,6 +54,7 @@ sprite_t *duplicateSprite(const sprite_t *spr)
 	s->transparent_color = spr->transparent_color;
 	s->flags = spr->flags;
 	sprite_copyPalette(spr, s);
+	memcpy(s->pixels, spr->pixels, spr->w * spr->h);
 
 	return s;
 }
