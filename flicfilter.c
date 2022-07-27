@@ -46,6 +46,7 @@ enum {
 	OPT_GAIN,
 	OPT_GAMMA,
 	OPT_RESIZE,
+	OPT_CANVAS,
 };
 
 static struct option long_options[] = {
@@ -59,6 +60,7 @@ static struct option long_options[] = {
 	{ "gain",             required_argument,  0, OPT_GAIN },
 	{ "gamma",            required_argument,  0, OPT_GAMMA },
 	{ "resize",           required_argument,  0, OPT_RESIZE },
+	{ "canvas",           required_argument,  0, OPT_CANVAS },
 
 	{ },
 };
@@ -74,7 +76,8 @@ static void printHelp()
 	printf(" -v                       Enable verbose output\n");
 	printf(" -o,--out=file            Set output file (default: %s)\n", DEFAULT_OUTFILE);
 	printf("\nFilter options:\n");
-	printf(" --resize WxY             Resize video size. Eg: 160x120\n");
+	printf(" --resize WxH             Resize video size. Eg: 160x120\n");
+	printf(" --canvas WxH             Resize canvas, animation centered.\n");
 	printf(" --gamma value            Apply gamma to palette. Eg: 1.6\n");
 	printf(" --gain value             Apply gain to palette. Eg: 2.3\n");
 	printf(" --quantize_palette=bits  Quantize palette to bits per color. For instance,\n");
@@ -325,8 +328,45 @@ static void apply_resize(animation_t *anim, int w, int h)
 
 		freeSprite(orig);
 	}
+}
+
+static void apply_canvas(animation_t *anim, int w, int h)
+{
+	int i;
+	sprite_t *orig, *replacement;
+	int bgcolor;
+	spriterect_t destRect;
+
+	printf("Resizing canvas to %dx%d...\n",w,h);
+
+
+	for (i=0; i<anim->num_frames; i++) {
+		orig = anim->frames[i];
+		destRect.w = orig->w;
+		destRect.h = orig->h;
+		destRect.x = (w - orig->w) / 2;
+		destRect.y = (h - orig->h) / 2;
+
+		replacement = allocSprite(w, h, 256, SPRITE_FLAG_OPAQUE);
+		if (!replacement) {
+			fprintf(stderr, "could not allocate scaled frame\n");
+			return;
+		}
+
+		// TODO : Think of something better!
+		bgcolor = anim->frames[i]->pixels[0];
+
+		sprite_copyPalette(orig, replacement);
+		sprite_fill(replacement, bgcolor);
+		sprite_copyRect(orig, NULL, replacement, &destRect);
+
+		anim->frames[i] = replacement;
+
+		freeSprite(orig);
+	}
 
 }
+
 
 static int applyFilter(animation_t *anim, int filter, const char *filterarg)
 {
@@ -388,6 +428,20 @@ static int applyFilter(animation_t *anim, int filter, const char *filterarg)
 			}
 			apply_resize(anim, w, h);
 			break;
+
+		case OPT_CANVAS:
+			i = sscanf(filterarg, "%dx%d", &w, &h);
+			if (i != 2) {
+				fprintf(stderr, "Invalid size\n");
+				return -1;
+			}
+			if ((w < 1)||(h < 1)) {
+				fprintf(stderr, "Invalid size\n");
+				return -2;
+			}
+			apply_canvas(anim, w, h);
+			break;
+
 	}
 
 	return 0;
