@@ -81,7 +81,8 @@ static void printHelp()
 	printf(" --gamma value            Apply gamma to palette. Eg: 1.6\n");
 	printf(" --gain value             Apply gain to palette. Eg: 2.3\n");
 	printf(" --quantize_palette=bits  Quantize palette to bits per color. For instance,\n");
-	printf("                          for SMS, use 2.\n");
+	printf("                          for SMS, use 2. If this creates duplicate colors,\n");
+	printf("                          they will be optimised out.\n");
 	printf("\n");
 	printf("Some attempts at denoising: (YMMV)\n");
 	printf(" --denoise_spix           Try to remove single pixel noise by replacing\n");
@@ -276,12 +277,20 @@ static void apply_denoise_tempral1(animation_t *anim)
 static void apply_quantize_palette(animation_t *anim, int bits_per_component)
 {
 	int i;
+	palette_t newpal;
 
 	printf("Quantizing palette...\n");
 
 	for (i=0; i<anim->num_frames; i++) {
 		palette_quantize(&anim->frames[i]->palette, bits_per_component);
+
+		memcpy(&newpal, &anim->frames[i]->palette, sizeof(palette_t));
+		palette_dropDuplicateColors(&newpal);
+
+		sprite_remapPalette(anim->frames[i], &newpal);
 	}
+
+
 }
 
 static void apply_gain(animation_t *anim, double gain)

@@ -1,3 +1,22 @@
+/*
+    swpxlt - A collection of image/palette manipulation tools
+
+    Copyright (C) 2022 Raphael Assenat
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write to the Free Software Foundation, Inc.,
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
@@ -90,6 +109,11 @@ void palette_addColor(palette_t * pal, int r, int g, int b)
 		palette_setColor(pal, pal->count, r, g, b);
 		pal->count++;
 	}
+}
+
+void palette_addColorEnt(palette_t *pal, palent_t *entry)
+{
+	palette_addColor(pal, entry->r, entry->g, entry->b);
 }
 
 void palette_clear(palette_t * pal)
@@ -215,6 +239,11 @@ int palette_findColor(const palette_t *pal, int r, int g, int b)
 		}
 	}
 	return -1;
+}
+
+int palette_findColorEnt(const palette_t *pal, palent_t *entry)
+{
+	return palette_findColor(pal, entry->r, entry->g, entry->b);
 }
 
 //
@@ -643,5 +672,21 @@ int palette_gamma(palette_t *pal, double gamma)
 	return 0;
 }
 
+int palette_dropDuplicateColors(palette_t *pal)
+{
+	int i;
+	palette_t newpal;
 
+	newpal.count = 0;
+
+	for (i=0; i<pal->count; i++) {
+		if (-1 == palette_findColorEnt(&newpal, &pal->colors[i])) {
+			palette_addColorEnt(&newpal, &pal->colors[i]);
+		}
+	}
+
+	memcpy(pal, &newpal, sizeof(palette_t));
+
+	return 0;
+}
 

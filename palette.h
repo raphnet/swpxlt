@@ -40,7 +40,9 @@ int palette_parseOutputFormat(const char *arg);
 int palette_findBestMatch(const palette_t *pal, int r, int g, int b, int method);
 void palette_setColor(palette_t * pal, uint8_t index, int r, int g, int b);
 void palette_addColor(palette_t * pal, int r, int g, int b);
+void palette_addColorEnt(palette_t *pal, palent_t *entry);
 int palette_findColor(const palette_t *pal, int r, int g, int b);
+int palette_findColorEnt(const palette_t *pal, palent_t *entry);
 void palette_clear(palette_t * pal);
 
 int palette_compareColorsManhattan(const palette_t *pal, int color1, int color2);
@@ -66,5 +68,7 @@ int palettes_match(const palette_t *pal1, const palette_t *pal2);
 int palette_quantize(palette_t *pal, int bits_per_component);
 int palette_gain(palette_t *pal, double gain);
 int palette_gamma(palette_t *pal, double gamma);
+
+int palette_dropDuplicateColors(palette_t *pal);
 
 #endif // _palette_h__
