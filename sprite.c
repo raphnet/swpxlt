@@ -508,6 +508,31 @@ int sprite_getPixel(const sprite_t *spr, int x, int y)
 	return spr->pixels[y * spr->w + x];
 }
 
+int sprite_getPixels8x8(const sprite_t *spr, int x, int y, uint8_t *dst)
+{
+	int Y,X;
+	uint8_t *src;
+
+	if ( ((x + 8) <= spr->w) && ((y + 8) <= spr->h)) {
+
+		src = spr->pixels + y * spr->w + x;
+		for (Y=0; Y<8; Y++) {
+			memcpy(dst, src, 8);
+			dst += 8;
+			src += spr->w;
+		}
+		return 0;
+	}
+
+	for (Y=0; Y<8; Y++) {
+		for (X=0; X<8; X++) {
+			*dst = sprite_getPixelSafeExtend(spr, x + X, y + Y);
+			dst++;
+		}
+	}
+	return 0;
+}
+
 int sprite_getPixelSafe(const sprite_t *spr, int x, int y)
 {
 	if ((x < 0)||(y < 0)||(x >= spr->w)||(y >= spr->h)) {
@@ -799,5 +824,43 @@ int sprite_setPixelsStrip(struct sprite *spr, int x, int y, uint8_t *data, int c
 	return 0;
 }
 
+int sprite_panX(struct sprite *spr, int pan)
+{
+	int y,x;
+	uint8_t linebuf[spr->w];
+	int len1, len2;
 
+	pan = pan % spr->w;
+
+	if (pan == 0) { // nop
+		return 0;
+	}
+
+	if (pan < 0) {
+		pan = spr->w + pan;
+	}
+
+	// consider w = 100
+	//
+	// A-----------------------------------------B
+	//
+	// if pan=10
+	// -----BA------------------------------------
+	// len2          len1
+	//
+	// if pan=90
+	// -----------------------------------BA------
+	// len2                                len1
+	//
+	len1 = spr->w - pan;
+	len2 = spr->w - len1;
+
+	for (y=0; y<spr->h; y++) {
+		memcpy(linebuf + pan, spr->pixels + y * spr->w , len1);
+		memcpy(linebuf, spr->pixels + y * spr->w + len1 , len2);
+		memcpy(spr->pixels + y * spr->w, linebuf, spr->w);
+	}
+
+	return 0;
+}
 
