@@ -10,6 +10,9 @@ typedef struct _tilemap tilemap_t;
 typedef struct _SMS_Tile {
 	// The 8x8 sprite in 8bpp format. For finding already existing sprites
 	uint8_t image_8bpp[64];
+	uint8_t image_8bpp_x[64];
+	uint8_t image_8bpp_y[64];
+	uint8_t image_8bpp_xy[64];
 	// SMS planar
 	uint8_t native[32];
 	// How many time this tile was added to the catalog
@@ -25,10 +28,18 @@ typedef struct _tilecatalog {
 tilecatalog_t *tilecat_new(void);
 void tilecat_free(tilecatalog_t *tc);
 
+// remove all contents, freeing memory too if requested
+void tilecat_clear(tilecatalog_t *tc, int freemem);
+
 // id : Tile ID it was added or found as (can be NULL)
 // flags : Flip x/y flags (when found in catalog but flipped) (can be NULL)
 //
 int tilecat_addFromSprite(tilecatalog_t *tc, sprite_t *src, int x, int y, uint32_t *id, uint8_t *flags);
+
+// check if the 8x8 area of img (origin given in pixel) matches a tile
+// already in catalog. catalog id returned in tid, flip flags in flags.
+// returns true/false
+int tilecat_isTileInCatalog(tilecatalog_t *tc, sprite_t *img, int x, int y, uint32_t *tid, uint8_t *flags);
 
 // tm can be NULL
 int tilecat_addAllFromSprite(tilecatalog_t *tc, sprite_t *src, tilemap_t *tm);

@@ -27,7 +27,20 @@ void tilecat_free(tilecatalog_t *tc)
 	}
 }
 
-static int tilecat_isInCatalog(tilecatalog_t *tc, uint8_t *image_8bpp, uint32_t *tid)
+void tilecat_clear(tilecatalog_t *tc, int freemem)
+{
+	if (freemem) {
+		tc->num_tiles = 0;
+		tc->alloc_count = 0;
+		free(tc->tiles);
+		tc->tiles = NULL;
+	}
+	else {
+		tc->num_tiles = 0;
+	}
+}
+
+int tilecat_isInCatalog(tilecatalog_t *tc, uint8_t *image_8bpp, uint32_t *tid)
 {
 	uint32_t i;
 
@@ -77,36 +90,43 @@ static void tilecat_flipXY(const uint8_t *image_8bpp, uint8_t *dst)
 
 static int tilecat_isInCatalogFlags(tilecatalog_t *tc, uint8_t *image_8bpp, uint32_t *tid, uint8_t *flags)
 {
-	uint8_t flipped[64];
+	uint32_t i;
 
-	if (tilecat_isInCatalog(tc, image_8bpp, tid)) {
-		if (flags) {
-			*flags = 0;
+	for (i=0; i<tc->num_tiles; i++) {
+		if (0 == memcmp(tc->tiles[i].image_8bpp, image_8bpp, 64)) {
+			if (tid) { *tid = i; }
+			if (flags) { *flags = 0; }
+			return 1;
 		}
-		return 1;
+		if (0 == memcmp(tc->tiles[i].image_8bpp_x, image_8bpp, 64)) {
+			if (tid) { *tid = i; }
+			if (flags) { *flags = TILEMAP_FLIP_X; }
+			return 1;
+		}
+		if (0 == memcmp(tc->tiles[i].image_8bpp_y, image_8bpp, 64)) {
+			if (tid) { *tid = i; }
+			if (flags) { *flags = TILEMAP_FLIP_Y; }
+			return 1;
+		}
+		if (0 == memcmp(tc->tiles[i].image_8bpp_xy, image_8bpp, 64)) {
+			if (tid) { *tid = i; }
+			if (flags) { *flags = TILEMAP_FLIP_XY; }
+			return 1;
+		}
+
 	}
 
-	tilecat_flipX(image_8bpp, flipped);
-	if (tilecat_isInCatalog(tc, flipped, tid)) {
-		if (flags) {
-			*flags = TILEMAP_FLIP_X;
-		}
-		return 1;
-	}
+	return 0;
+}
 
-	tilecat_flipY(image_8bpp, flipped);
-	if (tilecat_isInCatalog(tc, flipped, tid)) {
-		if (flags) {
-			*flags = TILEMAP_FLIP_Y;
-		}
-		return 1;
-	}
 
-	tilecat_flipXY(image_8bpp, flipped);
-	if (tilecat_isInCatalog(tc, flipped, tid)) {
-		if (flags) {
-			*flags = TILEMAP_FLIP_X | TILEMAP_FLIP_Y;
-		}
+int tilecat_isTileInCatalog(tilecatalog_t *tc, sprite_t *img, int x, int y, uint32_t *tid, uint8_t *flags)
+{
+	uint8_t image_8bpp[64];
+
+	sprite_getPixels8x8(img, x, y, image_8bpp);
+
+	if (tilecat_isInCatalogFlags(tc, image_8bpp, tid, flags)) {
 		return 1;
 	}
 
@@ -122,7 +142,7 @@ static int tilecat_addTile(tilecatalog_t *tc, uint8_t *image_8bpp, uint32_t *tid
 
 	if (tc->num_tiles >= tc->alloc_count) {
 //		printf("Cur alloc count: %d\n",tc->alloc_count);
-		tc->alloc_count += 16;
+		tc->alloc_count += 128;
 		tmp = sizeof(sms_tile_t) * tc->alloc_count;
 //		printf("Alloc size: %d\n", tmp);
 		tc->tiles = realloc(tc->tiles, tmp);
@@ -135,6 +155,12 @@ static int tilecat_addTile(tilecatalog_t *tc, uint8_t *image_8bpp, uint32_t *tid
 
 	memset(&tc->tiles[tc->num_tiles], 0, sizeof(sms_tile_t));
 	memcpy(tc->tiles[tc->num_tiles].image_8bpp, image_8bpp, 64);
+
+	// Add pre-flipped versions for faster search
+	tilecat_flipX(image_8bpp, tc->tiles[tc->num_tiles].image_8bpp_x);
+	tilecat_flipY(image_8bpp, tc->tiles[tc->num_tiles].image_8bpp_y);
+	tilecat_flipXY(image_8bpp, tc->tiles[tc->num_tiles].image_8bpp_xy);
+
 	tc->tiles[tc->num_tiles].usage_count = 1;
 
 	if (tid) {
@@ -149,18 +175,11 @@ static int tilecat_addTile(tilecatalog_t *tc, uint8_t *image_8bpp, uint32_t *tid
 int tilecat_addFromSprite(tilecatalog_t *tc, sprite_t *src, int x, int y, uint32_t *id, uint8_t *flags)
 {
 	uint8_t image_8bpp[64];
-	int X, Y, i;
 	uint32_t tid;
 	uint8_t tflags;
 
 	//  Get 8x8 area
-	i = 0;
-	for (Y=0; Y<8; Y++) {
-		for (X=0; X<8; X++) {
-			image_8bpp[i] = sprite_getPixelSafeExtend(src, x + X, y + Y);
-			i++;
-		}
-	}
+	sprite_getPixels8x8(src, x, y, image_8bpp);
 
 	if (tilecat_isInCatalogFlags(tc, image_8bpp, &tid, &tflags)) {
 //		printf("Already cataloged, ID is %u\n", tid);
