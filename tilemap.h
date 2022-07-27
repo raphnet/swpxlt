@@ -36,11 +36,29 @@ int tilemap_replaceID(tilemap_t *tm, int orig_id, int new_id, uint8_t new_flags)
 
 sprite_t *tilemap_toSprite(tilemap_t *tm, tilecatalog_t *cat, palette_t *pal);
 
+// Fill a tilemap with catalog tile IDs for image. Missing tiles are NOT
+// added to catalog, those are set to 0xFFFF.
+//
+// return the number of unique tiles that were missing and would need to be added
+// to the catalog.
+//
+int tilemap_populateFromCatalog(tilemap_t *tm, sprite_t *img, tilecatalog_t *cat);
+
 uint8_t tilemap_getUsedFlags(tilemap_t *tm);
 int tilemap_countFlag(tilemap_t *tm, uint8_t flag);
+
+// compare two tilemaps. Must have the same size and refer tiles IDs from the
+// same catalog.
+//
+// Returns the number of cells using the same tile id and flags.
+//
+int tilemap_compare(tilemap_t *tm1, tilemap_t *tm2);
 
 void tilemap_printInfo(tilemap_t *tm);
 
 int tilemap_saveSMS(tilemap_t *tm, const char *filename);
+void tilemap_listEntries(struct tileUseEntry *entries, int count);
+void tilemap_sortEntries(struct tileUseEntry *entries, int count);
+
 
 #endif // _tilemap_h__

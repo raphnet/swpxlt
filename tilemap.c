@@ -120,6 +120,72 @@ int tilemap_replaceID(tilemap_t *tm, int orig_id, int new_id, uint8_t new_flags)
 	return 0;
 }
 
+int tilemap_compare(tilemap_t *tm1, tilemap_t *tm2)
+{
+	int y,x;
+	int match;
+
+	if (!tm1 || !tm2) {
+		fprintf(stderr, "internal error : comparing NULL tilemap(s) %p %p!", tm1, tm2);
+		exit(1);
+	}
+
+	if (tm1->w != tm2->w) {
+		return 0;
+	}
+	if (tm1->h != tm2->h) {
+		return 0;
+	}
+
+	for (y=0; y<tm1->h; y++) {
+		for (x=0; x<tm1->w; x++) {
+			if (tilemap_getTileID(tm1, x, y) != tilemap_getTileID(tm2, x, y)) {
+				continue;
+			}
+			if (tilemap_getTileFlags(tm1, x, y) != tilemap_getTileFlags(tm2, x, y)) {
+				continue;
+			}
+			match++;
+		}
+	}
+
+	return match;
+}
+
+// returns number unique missing tiles in cat that would need adding
+//
+int tilemap_populateFromCatalog(tilemap_t *tm, sprite_t *img, tilecatalog_t *cat)
+{
+	uint32_t id;
+	uint8_t flags;
+	int y,x;
+	int missing = 0;
+	tilecatalog_t *addcat;
+
+	// use a temporary catalog to collect and count unique missing tiles
+	addcat = tilecat_new();
+	if (!addcat) {
+		return 0;
+	}
+
+	for (y=0; y<tm->h; y++) {
+		for (x=0; x<tm->w; x++) {
+			if (tilecat_isTileInCatalog(cat, img, x*8, y*8, &id, &flags)) {
+				tilemap_setTileID(tm, x, y, id, flags);
+			} else {
+				tilecat_addFromSprite(addcat, img, x*8, y*8, &id, &flags);
+				tilemap_setTileID(tm, x, y, 0xFFFF, 0);
+			}
+		}
+	}
+
+	missing = addcat->num_tiles;
+
+	tilecat_free(addcat);
+
+	return missing;
+}
+
 sprite_t *tilemap_toSprite(tilemap_t *tm, tilecatalog_t *cat, palette_t *pal)
 {
 	sprite_t *spr;
@@ -239,4 +305,25 @@ int tilemap_saveSMS(tilemap_t *tm, const char *filename)
 	return 0;
 }
 
+static int compare_tileCounts(const void *a, const void *b)
+{
+	const struct tileUseEntry *enta = a;
+	const struct tileUseEntry *entb = b;
+
+	return (enta->usecount > entb->usecount) - (enta->usecount < entb->usecount);
+}
+
+
+void tilemap_sortEntries(struct tileUseEntry *entries, int count)
+{
+	qsort(entries, count, sizeof(struct tileUseEntry), compare_tileCounts);
+}
+
+void tilemap_listEntries(struct tileUseEntry *entries, int count)
+{
+	int i;
+	for (i=0; i<count; i++) {
+		printf("Tile ID %d used %d times\n", entries[i].id, entries[i].usecount);
+	}
+}
 
