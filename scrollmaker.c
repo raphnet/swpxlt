@@ -21,7 +21,8 @@ enum {
 	OPT_FPS,
 	OPT_SPD,
 	OPT_WIDTH,
-	OPT_HEIGHT
+	OPT_HEIGHT,
+	OPT_BGCOLOR,
 };
 
 static struct option long_options[] = {
@@ -33,6 +34,8 @@ static struct option long_options[] = {
 	{ "spdx",		required_argument,	0,	OPT_SPD },
 	{ "addlayer",	required_argument,	0,	OPT_ADD_LAYER },
 	{ "fps",		required_argument,	0,	OPT_FPS },
+	{ "bgcolor",	required_argument,	0,	OPT_BGCOLOR },
+
 };
 
 static void printHelp()
@@ -44,10 +47,11 @@ static void printHelp()
 	printf("\nGeneral / Global options:\n");
 	printf("   -h                      Print usage information\n");
 	printf("   -v                      Enable verbose output\n");
-	printf("   -width w            Output width\n");
-	printf("   -height h           Output height\n");
+	printf("   -width w                Output width\n");
+	printf("   -height h               Output height\n");
 	printf("   -o, -out filename.flc   Output file. Default: %s\n", DEFAULT_OUTPUT_FILE);
 	printf("   -fps value              Output frame rate\n");
+	printf("   -bgcolor idx            Background color (palette index)\n");
 
 	printf("\nOptions for next layer:\n");
 	printf("   -spdx speed              Pixels-per-frame horizontal movement for layer\n");
@@ -103,7 +107,7 @@ void updateLayerPositions()
 			l->cur_x = l->sprite->w + l->cur_x;
 		}
 
-	//	printf("  Layer %d xpos now %d\n", i + 1, l->cur_x);
+		
 	}
 
 }
@@ -113,25 +117,51 @@ void blitLayers(sprite_t *dst)
 	int i;
 	struct layer *l = layers;
 	spriterect_t dstrect;
+	int x, y;
 
 	// TODO : It is assumed that layers are larger than the canvas right now...
 
 	for (i=0; i<num_layers; i++,l++) {
 
-		dstrect.x = l->cur_x;
-		dstrect.y = l->cur_y;
-
-		sprite_copyRect(l->sprite, NULL, dst, &dstrect);
-
-		if (l->cur_x > 0) {
-			dstrect.x = l->cur_x - l->sprite->w;
-			sprite_copyRect(l->sprite, NULL, dst, &dstrect);
+		if (g_verbose) {
+			printf("Layer %d xpos %d\n", i + 1, l->cur_x);
 		}
 
+		if (l->cur_y > 0) { y = l->cur_y - l->sprite->h; } else { y = l->cur_y; }
+
+		for (	; y<dst->h; y+=l->sprite->h)
+		{
+			if (l->cur_x > 0) { x = l->cur_x - l->sprite->h; } else { x = l->cur_x; }
+
+			for (	; x < dst->w; x+= l->sprite->w) {
+				if (g_verbose) {
+					printf("  Draw at %d\n", x);
+				}
+				dstrect.x = x;
+				dstrect.y = y;
+				sprite_copyRect(l->sprite, NULL, dst, &dstrect);
+			}
+		}
+
+
+/*
+		if (l->cur_x >= 0) {
+			for (x = l->cur_x - l->sprite->w; x <= dst->w; x += l->sprite->w) {
+				dstrect.x = x;
+				sprite_copyRect(l->sprite, NULL, dst, &dstrect);
+			}
+		}
 		if (l->cur_x < 0) {
-			dstrect.x = l->cur_x + l->sprite->w;
-			sprite_copyRect(l->sprite, NULL, dst, &dstrect);
+			
+			for (x = l->cur_x; x < dst->w; x+= l->sprite->w) {
+				if (g_verbose) {
+					printf("  Draw at %d\n", x);
+				}
+				dstrect.x = x;
+				sprite_copyRect(l->sprite, NULL, dst, &dstrect);
+			}
 		}
+*/
 
 	}
 
@@ -148,6 +178,7 @@ int main(int argc, char **argv)
 	int fps = 30;
 	int next_layer_speed = 0;
 	int frameno = 0;
+	int bgcolor = 0;
 
 	while ((opt = getopt_long_only(argc, argv, "hvo:w:h:", long_options, NULL)) != -1) {
 		switch (opt) {
@@ -198,6 +229,14 @@ int main(int argc, char **argv)
 					}
 					num_layers++;
 					break;
+			case OPT_BGCOLOR:
+					bgcolor = strtol(optarg, &e, 0);
+					if ((e == optarg)) {
+						fprintf(stderr, "invalid speed\n");
+						return 1;
+					}
+					break;
+
 		}
 	}
 
@@ -232,6 +271,7 @@ int main(int argc, char **argv)
 
 		updateLayerPositions();
 
+		sprite_fill(img, bgcolor);
 		blitLayers(img);
 		if (flic_appendFrame(outflic, img->pixels, &img->palette)) {
 			fprintf(stderr, "error writing flic frame\n");
