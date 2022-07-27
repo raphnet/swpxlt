@@ -7,7 +7,7 @@ LDFLAGS=`libpng-config --libs` -lm
 WITH_GIF_SUPPORT=1
 
 
-PROG=paltool png2vga png2cga swpxlt plasmagen dither flicinfo flic2png flicplay flicmerge
+PROG=paltool png2vga png2cga swpxlt plasmagen dither flicinfo flic2png flicplay flicmerge flicfilter
 OBJS=*.o
 COMMON=palette.o sprite.o builtin_palettes.o rgbimage.o sprite_transform.o util.o
 
@@ -57,6 +57,8 @@ flicplay: flicplay.o flic.o $(COMMON)
 
 flicplay.o: flicplay.c
 	$(CC) $(SDL_CFLAGS) $(CFLAGS) -c -o $@ $^
+
+flicfilter: flicfilter.o flic.o anim.o $(COMMON)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $^

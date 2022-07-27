@@ -39,6 +39,7 @@ On a Debian system, besides the obvious (gcc, make, etc) you need:
  - flicinfo : Display information about a FLI/FLC file, such as frame size, frame count, speed...
  - flic2png : Convert a FLI/FLC file to a series of PNG files
  - flicmerge : Take FLI/FLC, Animated GIF or PNG files as input and merge them into a single FLC file
+ - flicfilter : Read a FLI/FLC or Animated GIF, apply some transformations, then output a new FLC file
  - flicplay : FLI/FLC playback tool using SDL
 
 ### swpxlt
@@ -422,6 +423,44 @@ Example:
 `
   ./flicmerge -d 60 image1.png image2.png ... image64.png -o animation.flc
 `
+
+### flicfilter
+
+flicfilter reads an animatino (FLI/FLC or GIF), applies some optional filters (resize,
+palette operations, etc) and then writes a final .FLC file.
+
+
+```
+Usage: ./flicfilter [options] file
+
+flicfilter reads a flic file, applies transformations or filters, then writes
+a new file containing the results.
+
+Options:
+ -h                       Print usage information
+ -v                       Enable verbose output
+ -o,--out=file            Set output file (default: out.flc)
+
+Filter options:
+ --resize WxY             Resize video size. Eg: 160x120
+ --gamma value            Apply gamma to palette. Eg: 1.6
+ --gain value             Apply gain to palette. Eg: 2.3
+ --quantize_palette=bits  Quantize palette to bits per color. For instance,
+                          for SMS, use 2.
+
+Some attempts at denoising: (YMMV)
+ --denoise_spix           Try to remove single pixel noise by replacing
+                          pixels completely surrounded by a given color
+                          by that color.
+ --denoise_temporal1      When a pixel change, only accept the change if
+                          the pixel is still that color in the next frame.
+```
+
+Example:
+`
+  ./flicfilter examples/RN3.FLI -o b.flc --resize 256x192 --gamma 1.6 --quantize_palette 2
+`
+
 
 ### flicplay
 
