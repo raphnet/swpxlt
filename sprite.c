@@ -826,7 +826,7 @@ int sprite_setPixelsStrip(struct sprite *spr, int x, int y, uint8_t *data, int c
 
 int sprite_panX(struct sprite *spr, int pan)
 {
-	int y,x;
+	int y;
 	uint8_t linebuf[spr->w];
 	int len1, len2;
 

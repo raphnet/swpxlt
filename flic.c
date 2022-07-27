@@ -882,7 +882,9 @@ int flic_readOneFrame(FlicFile *ff, int loop)
 
 	frame_offset = ftell(ff->fptr);
 	if (readFrameHeader(ff->fptr, &ff->frameHeader)) {
-		printf("%d read header failed\n", ff->cur_frame);
+		if (ff->cur_frame < 1 || g_verbose) {
+			printf("%d read header failed\n", ff->cur_frame);
+		}
 		return -1;
 	}
 

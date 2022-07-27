@@ -63,4 +63,8 @@ int palette_save(const char *outfilename, palette_t *src, uint8_t format, const 
 int palette_generateRemap(const palette_t *srcpal, const palette_t *dstpal, palremap_lut_t *dst);
 int palettes_match(const palette_t *pal1, const palette_t *pal2);
 
+int palette_quantize(palette_t *pal, int bits_per_component);
+int palette_gain(palette_t *pal, double gain);
+int palette_gamma(palette_t *pal, double gamma);
+
 #endif // _palette_h__
