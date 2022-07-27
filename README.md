@@ -442,7 +442,8 @@ Options:
  -o,--out=file            Set output file (default: out.flc)
 
 Filter options:
- --resize WxY             Resize video size. Eg: 160x120
+ --resize WxH             Resize video size. Eg: 160x120
+ --canvas WxH             Resize canvas, animation centered.
  --gamma value            Apply gamma to palette. Eg: 1.6
  --gain value             Apply gain to palette. Eg: 2.3
  --quantize_palette=bits  Quantize palette to bits per color. For instance,
@@ -458,7 +459,7 @@ Some attempts at denoising: (YMMV)
 
 Example:
 `
-  ./flicfilter examples/RN3.FLI -o b.flc --resize 256x192 --gamma 1.6 --quantize_palette 2
+  ./flicfilter examples/RN3.FLI -o b.flc --resize 160x120 --gamma 1.6 --quantize_palette 2 --canvas 256x192
 `
 
 
