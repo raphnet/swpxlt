@@ -6,6 +6,7 @@
 #include "globals.h"
 #include "sprite.h"
 #include "builtin_palettes.h"
+#include "util.h"
 
 static void printEnt_hex(const palent_t *ent, const char *suf)
 {
@@ -569,6 +570,7 @@ int palette_save(const char *outfilename, palette_t *src, uint8_t format, const 
 
 	return res;
 }
+
 int palette_parseOutputFormat(const char *arg)
 {
 	if (0 == strcasecmp(arg, "vga_asm")) { return PALETTE_FORMAT_VGAASM; }
@@ -579,3 +581,67 @@ int palette_parseOutputFormat(const char *arg)
 	if (0 == strcasecmp(arg, "sms_bin")) { return PALETTE_FORMAT_SMS_BIN; }
 	return PALETTE_FORMAT_NONE;
 }
+
+static uint8_t qn(uint8_t i, int nshift)
+{
+	return i >> nshift;
+}
+
+static uint8_t qn8(uint8_t i, int nshift)
+{
+	return i * 0xff / (0xff >> nshift);
+}
+
+int palette_quantize(palette_t *pal, int bits_per_component)
+{
+	int shift = 8-bits_per_component;
+	int i;
+
+	for (i=0; i<pal->count; i++) {
+		pal->colors[i].r = qn(pal->colors[i].r, shift);
+		pal->colors[i].g = qn(pal->colors[i].g, shift);
+		pal->colors[i].b = qn(pal->colors[i].b, shift);
+	}
+
+	for (i=0; i<pal->count; i++) {
+		pal->colors[i].r = qn8(pal->colors[i].r, shift);
+		pal->colors[i].g = qn8(pal->colors[i].g, shift);
+		pal->colors[i].b = qn8(pal->colors[i].b, shift);
+	}
+
+	return 0;
+}
+
+int palette_gain(palette_t *pal, double gain)
+{
+	int i;
+
+	for (i=0; i<pal->count; i++) {
+		pal->colors[i].r = clamp8bit(pal->colors[i].r * gain);
+		pal->colors[i].g = clamp8bit(pal->colors[i].g * gain);
+		pal->colors[i].b = clamp8bit(pal->colors[i].b * gain);
+	}
+
+	return 0;
+}
+
+static uint8_t fnGamma(uint8_t in, double val)
+{
+	return clamp8bit(255 * pow((in / 255.0),1/val));
+}
+
+int palette_gamma(palette_t *pal, double gamma)
+{
+	int i;
+
+	for (i=0; i<pal->count; i++) {
+		pal->colors[i].r = fnGamma(pal->colors[i].r, gamma);
+		pal->colors[i].g = fnGamma(pal->colors[i].g, gamma);
+		pal->colors[i].b = fnGamma(pal->colors[i].b, gamma);
+	}
+
+	return 0;
+}
+
+
+
