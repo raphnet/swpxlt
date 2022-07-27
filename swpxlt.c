@@ -85,6 +85,7 @@ void printHelp(void)
 	printf(" -s scale_factor   Scale by factor (1.0 = same size)\n");
 	printf(" -R algo		   Rotation algorithm to use (defualt: %s)\n", getAlgoName(rot_algos, DEFAULT_ROT_ALGO));
 	printf(" -r angle          Rotate by angle (degrees)\n");
+	printf(" -p x              Pan image by X\n");
 	printf("\n\n");
 
 	printf("Available scaling altorithms:\n");
@@ -267,12 +268,28 @@ int main(int argc, char **argv)
 	int force_transparent_color = 0;
 	int transparent_color = 0;
 	sprite_t *working_image = NULL, *tmp_image = NULL;
+	int panx = 0;
 
-	while ((opt = getopt(argc, argv, "hvi:o:S:s:R:r:T:")) != -1) {
+	while ((opt = getopt(argc, argv, "hvi:o:S:s:R:r:T:p:")) != -1) {
 		switch (opt) {
 			case '?': return -1;
 			case 'h': printHelp(); return 0;
 			case 'v': g_verbose = 1; break;
+
+			case 'p':
+					panx = strtol(optarg, &e, 0);
+					if (e == optarg) {
+						fprintf(stderr, "Invalid pan value\n");
+						retcode = 1;
+						goto error;
+					}
+					if (!working_image) {
+						fprintf(stderr, "Error: No image loaded.\n");
+						retcode = 1;
+						goto error;
+					}
+					sprite_panX(working_image, panx);
+					break;
 
 			case 'T':
 					transparent_color = strtol(optarg, &e, 0);
