@@ -42,6 +42,7 @@ void sprite_setPixelSafe(sprite_t *spr, int x, int y, int value);
 int sprite_getPixel(const sprite_t *spr, int x, int y);
 int sprite_getPixelSafe(const sprite_t *spr, int x, int y);
 int sprite_getPixelSafeExtend(const sprite_t *spr, int x, int y);
+int sprite_getPixels8x8(const sprite_t *spr, int x, int y, uint8_t *dst);
 void sprite_fill(struct sprite *spr, int color);
 int sprite_fillRect(struct sprite *spr, int x, int y, int w, int h, int color);
 
@@ -58,5 +59,7 @@ sprite_t *sprite_packPixels(const sprite_t *spr, int bits_per_pixel);
 
 void sprite_getFullRect(const sprite_t *src, spriterect_t *dst);
 int sprite_copyRect(const sprite_t *src, const spriterect_t *src_rect, sprite_t *dst, const spriterect_t *dst_rect);
+
+int sprite_panX(struct sprite *spr, int pan);
 
 #endif // _sprite_h__
