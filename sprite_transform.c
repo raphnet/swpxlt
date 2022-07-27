@@ -1,6 +1,27 @@
 #include <math.h>
 #include "sprite_transform.h"
 
+void sprite_scaleNearWH(const sprite_t *src, sprite_t *dst, int w, int h)
+{
+	int x,y;
+	uint8_t pixel;
+	double factor_x, factor_y;
+
+	factor_x = w / (double)src->w;
+	factor_y = h / (double)src->h;
+
+	for (y=0; y<dst->h; y++) {
+		for (x=0; x<dst->w; x++) {
+
+			pixel = sprite_getPixelSafeExtend(src, x/factor_x, y/factor_y);
+
+			sprite_setPixelSafe(dst, x, y, pixel);
+		}
+	}
+
+}
+
+
 
 void sprite_scaleNear(const sprite_t *src, sprite_t *dst, double factor)
 {
