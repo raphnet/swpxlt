@@ -2,29 +2,6 @@
 #include "tilemap.h"
 #include "tilecatalog.h"
 
-#if 0
-int compare_tileCounts(const void *a, const void *b)
-{
-	const struct tileUseEntry *enta = a;
-	const struct tileUseEntry *entb = b;
-
-	return (enta->usecount > entb->usecount) - (enta->usecount < entb->usecount);
-}
-
-static void sortEntries(struct tileUseEntry *entries, int count)
-{
-	qsort(entries, count, sizeof(struct tileUseEntry), compare_tileCounts);
-}
-
-static void listEntries(struct tileUseEntry *entries, int count)
-{
-	int i;
-	for (i=0; i<count; i++) {
-		printf("Tile ID %d used %d times\n", entries[i].id, entries[i].usecount);
-	}
-}
-#endif
-
 int tilereducer_reduceTo(tilemap_t *tm, tilecatalog_t *cat, palette_t *pal, int max_tiles, int strategy)
 {
 	struct tileUseEntry *entries = NULL;
