@@ -378,6 +378,7 @@ static void tilemapToPNTnext(encoder_t *enc, tilemap_t *map)
 			smstile = tileInVRAM(enc, tid);
 			if (smstile == NOT_IN_VRAM) {
 				fprintf(stderr, "Warning: skipping missing tile id %d\n", tid);
+exit(1);
 				continue;
 			}
 
@@ -401,9 +402,34 @@ static int isInPreviousPNT(encoder_t *enc, int id)
 	return 0;
 }
 
-static uint16_t loadTile(encoder_t *enc, uint32_t tid)
+static uint16_t loadTile(encoder_t *enc, uint32_t tid, int frame)
 {
-	int i;
+	int i, x, y, smstile;
+	tiled_frame_t *tframe;
+
+	if (enc->flags & SMSANIM_ENC_UPDATE_IN_PLACE && frame > 0)
+	{
+		tframe = &enc->frames[frame];
+
+
+		// Check if this is a tile update for a unique spot
+		i = tilemap_findUseOf(tframe->map, tid, &x, &y);
+		if (i) {
+			i = y * 32 + x;
+
+			// Get the SMS tile at that location
+			smstile = enc->vram_pnt[i] & 0x1FF;
+
+			if (!enc->vram_tile_in_use[smstile]) {
+				enc->vram_tile_in_use[smstile] = 1;
+				enc->tiles_in_vram[smstile] = tid;
+				printf("Replacing tile ID %d in-place (no PNT update) at %d,%d (%d)\n", tid, x, y, smstile);
+				return smstile;
+			}
+
+		}
+	}
+
 
 	// Attempt 1 : Only look for tiles not on screen at the moment!
 #if 1
@@ -541,7 +567,7 @@ static void encodeFrame(encoder_t *enc, int frame)
 		tid = ent[i].id;
 		smstile = tileInVRAM(enc, tid);
 		if (smstile == NOT_IN_VRAM) {
-			smstile = loadTile(enc, tid);
+			smstile = loadTile(enc, tid, frame);
 			if (smstile != NOT_IN_VRAM) {
 				if (enc->funcs->loadTile) {
 					enc->funcs->loadTile(tid, smstile, enc->ctx);

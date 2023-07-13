@@ -60,5 +60,7 @@ int tilemap_saveSMS(tilemap_t *tm, const char *filename);
 void tilemap_listEntries(struct tileUseEntry *entries, int count);
 void tilemap_sortEntries(struct tileUseEntry *entries, int count);
 
+// Return true and sets x/y if tile is used only in one place
+int tilemap_findUseOf(tilemap_t *tm, uint32_t tile, int *x, int *y);
 
 #endif // _tilemap_h__

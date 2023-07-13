@@ -12,12 +12,17 @@
 
 int g_verbose = 0;
 
-#define CODE_BANK			2
 #define MAX_OTIR_TILES		16
+
+#define DEFAULT_FIRST_BANK	2
 
 enum {
 	OPT_NOPAN = 256,
 	OPT_AGRESSIVE_PAN,
+	OPT_SINGLE_STRIDE_BANK,
+	OPT_SUPPORT_CODE_ADDR,
+	OPT_FIRST_BANK,
+	OPT_NO_UNSAFE,
 };
 
 static void printHelp()
@@ -33,16 +38,25 @@ static void printHelp()
 	printf(" -t, --maxtiles=count     Set max vdp tiles used for animation\n");
 	printf(" --nopan                  Disable use of scrollX register\n");
 	printf(" --agressivepan           Search agressively for best pan (slow)\n");
+
+	printf(" --singlestridebank       All strides in one bank\n");
+	printf(" --supportcode_org addr   Support code start address in bank 0\n");
+	printf(" --firstbank no           First bank to use (default: %d)\n", DEFAULT_FIRST_BANK);
+	printf(" --no_unsafe              Only use VRAM safe transfers\n");
 }
 
 static struct option long_options[] = {
-	{ "help",         no_argument,       0, 'h' },
-	{ "verbose",      no_argument,       0, 'v' },
-	{ "out",          required_argument, 0, 'o' },
-	{ "maxframes",    required_argument, 0, 'm' },
-	{ "maxtiles",     required_argument, 0, 't' },
-	{ "nopan",        no_argument,       0, OPT_NOPAN },
-	{ "agressivepan", no_argument,       0,	OPT_AGRESSIVE_PAN },
+	{ "help",             no_argument,       0, 'h' },
+	{ "verbose",          no_argument,       0, 'v' },
+	{ "out",              required_argument, 0, 'o' },
+	{ "maxframes",        required_argument, 0, 'm' },
+	{ "maxtiles",         required_argument, 0, 't' },
+	{ "nopan",            no_argument,       0, OPT_NOPAN },
+	{ "agressivepan",     no_argument,       0,	OPT_AGRESSIVE_PAN },
+	{ "singlestridebank", no_argument,       0, OPT_SINGLE_STRIDE_BANK },
+	{ "supportcode_org",  required_argument, 0, OPT_SUPPORT_CODE_ADDR },
+	{ "firstbank",        required_argument, 0, OPT_FIRST_BANK },
+	{ "no_unsafe",        no_argument,       0, OPT_NO_UNSAFE },
 	{ },
 };
 
@@ -58,6 +72,7 @@ struct asmdemo_ctx {
 	int n_strides;
 	uint8_t *strides[MAX_STRIDES]; // [0] word count, [1...] data
 	int unique_strides; // stats
+	int stride_used_banks; // stats
 
 	int cur_codebank;
 	int used_in_codebank;
@@ -67,16 +82,22 @@ struct asmdemo_ctx {
 	uint16_t last_de, last_hl;
 	uint8_t last_stride_bank;
 
+
+	uint8_t all_strides_in_one_bank;
+	uint8_t first_stride_in_frame;
+	uint16_t support_bank0_code_addr;
+	uint8_t first_bank;
+	uint8_t no_unsafe;
 };
 
 void asmdemo_animStart(void *ctx)
 {
 	struct asmdemo_ctx *context = ctx;
 
-	context->cur_codebank = CODE_BANK;
+	context->cur_codebank = context->first_bank;
 
 	fprintf(context->fptr, ";;; -- BEGIN SMS ANIMATION --\n");
-	fprintf(context->fptr, ".define ANIMATION_ENTRY_BANK %d\n", CODE_BANK);
+	fprintf(context->fptr, ".define ANIMATION_ENTRY_BANK %d\n", context->first_bank);
 
 	fprintf(context->fptr, ".bank %d slot 1\n", context->cur_codebank);
 	fprintf(context->fptr, ".org 0\n");
@@ -88,6 +109,9 @@ void asmdemo_animStart(void *ctx)
 void asmdemo_frameStart(int no, int panx, void *ctx)
 {
 	struct asmdemo_ctx *context = ctx;
+	static int last_pan=999;
+
+	context->first_stride_in_frame = 1;
 
 	if (context->used_in_codebank > 0x3E00) {
 		context->cur_codebank++;
@@ -106,16 +130,21 @@ void asmdemo_frameStart(int no, int panx, void *ctx)
 	fprintf(context->fptr, "@anim_frame%d:", no);
 	fprintf(context->fptr, "	halt\n");
 
-	fprintf(context->fptr,
-		"	; Pan screen\n"
-		"	ld a,%d			\n"
-		"	out ($bf), a		\n"
-		"	ld a,$88 		\n"
-		"	out ($bf), a		\n"
-		,
-		-panx
-	);
+	// only when pan changed
+	if (last_pan != panx) {
+		last_pan = panx;
 
+		fprintf(context->fptr,
+			"	; Pan screen\n"
+			"	ld a,%d			\n"
+			"	out ($bf), a		\n"
+			"	ld a,$88 		\n"
+			"	out ($bf), a		\n"
+			,
+			-panx
+		);
+
+	}
 }
 
 void asmdemo_frameEnd(void *ctx)
@@ -137,6 +166,9 @@ void asmdemo_animEnd(void *ctx)
 
 	fprintf(context->fptr, ".bank 0 slot 0\n");
 
+	if (context->support_bank0_code_addr) {
+		fprintf(context->fptr, ".org 0x%04x\n", context->support_bank0_code_addr);
+	}
 
 	fprintf(context->fptr, "	; HL: source address (must be pre-ored with $4000)\n");
 	fprintf(context->fptr, "	; DE: VRAM addr (must be pre-ored with $4000)\n");
@@ -153,6 +185,23 @@ void asmdemo_animEnd(void *ctx)
 		"	otir						\n"
 		"	ret							\n"
 	);
+
+
+	fprintf(context->fptr, "	; HL: source address (must be pre-ored with $4000)\n");
+	fprintf(context->fptr, "	; DE: VRAM addr (must be pre-ored with $4000)\n");
+	fprintf(context->fptr, "	; B: byte count\n");
+	fprintf(context->fptr, "	; Decreases C, zeroes B, increments HL, leaves DE as is\n");
+	fprintf(context->fptr, "@vram_oti_1tile:\n");
+
+	fprintf(context->fptr,
+		"	ld c,$bf					\n"
+		"	out (c),e					\n"
+		"	out (c),d					\n"
+
+		"	dec c ; C = $be				\n"
+		"	jp 0x007F 					\n"
+	);
+
 
 
 	fprintf(context->fptr, "	; DE: VRAM destination\n");
@@ -257,11 +306,15 @@ void asmdemo_loadTilesEnd(void *ctx)
 			if (n > 8)
 				n = 8;
 
-			if (otir_tiles + n <= MAX_OTIR_TILES) {
+			if ((otir_tiles + n <= MAX_OTIR_TILES) && !context->no_unsafe) {
 				fprintf(context->fptr, "	ld de, $%04x\n", 0x4000 | (smsid * 32));
 				fprintf(context->fptr, "	ld hl, @tilecatalog + %d\n", (catid * 32) & 0x3fff);
-				fprintf(context->fptr, "	ld b, %d\n", (32 * n)&0xff);
-				fprintf(context->fptr, "	call @vram_memcpy_otir");
+				if (n == 1) {
+					fprintf(context->fptr, "	call @vram_oti_1tile");
+				} else {
+					fprintf(context->fptr, "	ld b, %d\n", (32 * n)&0xff);
+					fprintf(context->fptr, "	call @vram_memcpy_otir");
+				}
 				otir_tiles += n;
 			} else {
 				fprintf(context->fptr, "	ld de, $%04x\n", 0x4000 | (smsid * 32));
@@ -302,12 +355,12 @@ void asmdemo_horizTileUpdate(uint16_t first_tile, uint8_t count, uint16_t *data,
 	//int i;
 
 
-	fprintf(context->fptr, "	; update %d tilemap entries\n", count);
+	fprintf(context->fptr, "	; update %d tilemap entries (%d)\n", count, context->n_strides);
 
 
 	de = (first_tile*2 + 0x3800) | 0x4000;
 
-	if (context->n_strides == 0) {
+	if (context->first_stride_in_frame) {
 		fprintf(context->fptr, "	ld c, $be\n");
 
 		fprintf(context->fptr, "	ld de, $%04x\n", de);
@@ -320,10 +373,25 @@ void asmdemo_horizTileUpdate(uint16_t first_tile, uint8_t count, uint16_t *data,
 		}
 	}
 
+
 	fprintf(context->fptr, "	ld hl, @stride%d\n", context->n_strides);
 	fprintf(context->fptr, "	ld b, %d\n", count * 2);
-	fprintf(context->fptr, "	ld a, bank(@stride%d)\n", context->n_strides);
-	fprintf(context->fptr, "	ld ($FFFF), a\n");
+	if (!context->all_strides_in_one_bank || context->first_stride_in_frame) {
+		fprintf(context->fptr, "	ld a, bank(@stride%d)\n", context->n_strides);
+		fprintf(context->fptr, "	ld ($FFFF), a\n");
+		context->first_stride_in_frame = 0;
+	}
+	fprintf(context->fptr, "    call @vram_memcpy");
+
+#if 0
+
+	fprintf(context->fptr, "	ld hl, @stride%d\n", context->n_strides);
+	fprintf(context->fptr, "	ld b, %d\n", count * 2);
+	if (!context->all_strides_in_one_bank || context->first_stride_in_frame) {
+		fprintf(context->fptr, "	ld a, bank(@stride%d)\n", context->n_strides);
+		fprintf(context->fptr, "	ld ($FFFF), a\n");
+		context->first_stride_in_frame = 0;
+	}
 
 	fprintf(context->fptr,
 		"	inc c ; $be -> $bf			\n"
@@ -336,7 +404,7 @@ void asmdemo_horizTileUpdate(uint16_t first_tile, uint8_t count, uint16_t *data,
 		context->n_strides,
 		context->n_strides
 	);
-
+#endif
 
 	context->last_de = de;
 
@@ -354,6 +422,7 @@ void asmdemo_horizTileUpdate(uint16_t first_tile, uint8_t count, uint16_t *data,
 	context->n_strides++;
 
 	context->used_in_codebank += 25;
+	context->first_stride_in_frame = 0;
 }
 
 void asmdemo_writeCatalog(tilecatalog_t *catalog, void *ctx)
@@ -402,6 +471,7 @@ void asmdemo_writeCatalog(tilecatalog_t *catalog, void *ctx)
 	fprintf(context->fptr, "\n\n;;;;; strides\n");
 	fprintf(context->fptr, ".bank %d slot 2\n", bank);
 	fprintf(context->fptr, ".org 0\n");
+	context->stride_used_banks++;
 
 	used = 0;
 	for (i=0; i<context->n_strides; i++) {
@@ -426,6 +496,7 @@ void asmdemo_writeCatalog(tilecatalog_t *catalog, void *ctx)
 			fprintf(context->fptr, ".bank %d slot 2\n", bank);
 			fprintf(context->fptr, ".org 0\n");
 			prev_bank = bank;
+			context->stride_used_banks++;
 		}
 #if 1
 		// If there are identical strides later, find them and save space
@@ -456,6 +527,10 @@ void asmdemo_writeCatalog(tilecatalog_t *catalog, void *ctx)
 	printf("Top used bank: %d\n", context->max_bank);
 	printf("Total strides: %d\n", context->n_strides);
 	printf("Unique strides: %d\n", context->unique_strides);
+	printf("Banks used for strides: %d\n", context->stride_used_banks);
+	if (context->stride_used_banks && !context->all_strides_in_one_bank) {
+		printf("Suggestion: Use --singlestridebank\n");
+	}
 }
 
 void asmdemo_updatePalette(palette_t *pal, void *ctx)
@@ -504,7 +579,11 @@ int main(int argc, char **argv)
 	int max_frames = 0xffff;
 	int max_vram_tiles = 440;
 	FILE *fptr = NULL;
-	uint32_t encflags = SMSANIM_ENC_FLAG_PANOPTIMISE;
+	uint32_t encflags = SMSANIM_ENC_FLAG_PANOPTIMISE | SMSANIM_ENC_UPDATE_IN_PLACE;
+	uint8_t all_strides_in_one_bank = 0;
+	uint16_t support_code_addr = 0;
+	uint8_t first_bank = DEFAULT_FIRST_BANK;
+	uint8_t no_unsafe = 0;
 
 	while ((opt = getopt_long_only(argc, argv, "hvo:m:t:", long_options, NULL)) != -1) {
 		switch (opt) {
@@ -531,6 +610,30 @@ int main(int argc, char **argv)
 				break;
 			case OPT_AGRESSIVE_PAN:
 				encflags |= SMSANIM_ENC_FLAG_AGRESSIVE_PAN;
+				break;
+			case OPT_SINGLE_STRIDE_BANK:
+				all_strides_in_one_bank = 1;
+				break;
+			case OPT_SUPPORT_CODE_ADDR:
+				support_code_addr = strtol(optarg, &e, 0);
+				if (e == optarg) {
+					fprintf(stderr, "invalid number\n");
+					return -1;
+				}
+				if (support_code_addr >= 0x4000) {
+					printf("Support code address must be within first 16kb\n");
+					return -1;
+				}
+				break;
+			case OPT_FIRST_BANK:
+				first_bank = strtol(optarg, &e, 0);
+				if (e == optarg) {
+					fprintf(stderr, "invalid number\n");
+					return -1;
+				}
+				break;
+			case OPT_NO_UNSAFE:
+				no_unsafe = 1;
 				break;
 		}
 	}
@@ -575,6 +678,10 @@ int main(int argc, char **argv)
 			perror("asmdemo_ctx");
 			return -1;
 		}
+		asmctx->all_strides_in_one_bank = all_strides_in_one_bank;
+		asmctx->support_bank0_code_addr = support_code_addr;
+		asmctx->first_bank = first_bank;
+		asmctx->no_unsafe = no_unsafe;
 
 		asmctx->fptr = stdout;
 

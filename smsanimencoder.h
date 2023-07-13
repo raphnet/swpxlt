@@ -22,6 +22,13 @@ typedef struct encoderContext encoder_t;
 
 #define SMSANIM_ENC_FLAG_PANOPTIMISE	1
 #define SMSANIM_ENC_FLAG_AGRESSIVE_PAN	2
+
+// When a tile needs to be uploaded to VRAM only to update
+// one place in the tilemap, try replacing the old tile directly
+// instead of loading the tile to a new VRAM location.
+//
+// Reduces pattern table updates for small detail animation
+#define SMSANIM_ENC_UPDATE_IN_PLACE		4
 encoder_t *encoder_init(int frames, int w, int h, int vram_max_tiles, uint32_t flags);
 void encoder_free(encoder_t *encoder);
 int encoder_addFrame(encoder_t *enc, sprite_t *img);

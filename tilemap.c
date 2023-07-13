@@ -327,3 +327,29 @@ void tilemap_listEntries(struct tileUseEntry *entries, int count)
 	}
 }
 
+int tilemap_findUseOf(tilemap_t *tm, uint32_t tile, int *x, int *y)
+{
+	int X,Y;
+	int foundx = -1, foundy;
+
+	for (Y=0; Y<tm->h; Y++) {
+		for (X=0; X<tm->w; X++) {
+			if (tm->data[Y*tm->w + X] == tile) {
+				if (foundx != -1)
+					return 0; // used multiple times - return false
+				foundx = X;
+				foundy = Y;
+			}
+		}
+	}
+
+	if (foundx != -1) {
+		*x = foundx;
+		*y = foundy;
+		return 1;
+	}
+
+	// Not found
+	return 0;
+}
+
