@@ -1,13 +1,13 @@
 CC=gcc
 LD=$(CC)
-CFLAGS=-Wall -g `libpng-config --cflags` -O3
+CFLAGS=-Wall -g `libpng-config --cflags` -O0
 LDFLAGS=`libpng-config --libs` -lm
 
 # Options
 WITH_GIF_SUPPORT=1
 
 
-PROG=paltool png2vga png2cga swpxlt plasmagen dither flicinfo flic2png flicplay flicmerge flicfilter
+PROG=paltool png2vga png2cga swpxlt plasmagen dither flicinfo flic2png flicplay flicmerge flicfilter scrollmaker img2sms anim2sms
 OBJS=*.o
 COMMON=palette.o sprite.o builtin_palettes.o rgbimage.o sprite_transform.o util.o
 
@@ -47,6 +47,15 @@ flicinfo: flicinfo.o flic.o $(COMMON)
 	$(LD) $(LDFLAGS) $^ -o $@
 
 flic2png: flic2png.o flic.o $(COMMON)
+	$(LD) $(LDFLAGS) $^ -o $@
+
+img2sms: img2sms.o tilecatalog.o tilemap.o tilereducer.o flic.o anim.o $(COMMON)
+	$(LD) $(LDFLAGS) $^ -o $@
+
+anim2sms: anim2sms.o tilecatalog.o tilemap.o tilereducer.o flic.o anim.o smsanimencoder.o $(COMMON)
+	$(LD) $(LDFLAGS) $^ -o $@
+
+scrollmaker: scrollmaker.o flic.o anim.o $(COMMON)
 	$(LD) $(LDFLAGS) $^ -o $@
 
 flicmerge: flicmerge.o flic.o anim.o $(COMMON)

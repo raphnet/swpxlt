@@ -41,6 +41,7 @@ On a Debian system, besides the obvious (gcc, make, etc) you need:
  - flicmerge : Take FLI/FLC, Animated GIF or PNG files as input and merge them into a single FLC file
  - flicfilter : Read a FLI/FLC or Animated GIF, apply some transformations, then output a new FLC file
  - flicplay : FLI/FLC playback tool using SDL
+ - img2sms : Converts a single image to the SMS (Sega Master System) format
 
 ### swpxlt
 
@@ -472,4 +473,58 @@ Example:
 `
   ./flicplay test.fli
 `
+
+
+### img2sms
+
+img2sms converts supported files (at the moment, PNG or GIF) to the SMS (Sega Master System) native format.
+In fact img2sms is very similar pre-existing (and more complete) tools such as [png2tile](https://github.com/yuv422/png2tile)
+and [bmp2tile](https://github.com/maxim-zhao/bmp2tile) which are commonly used.
+
+Current features:
+ - Loads PNG and GIF images. Files must have a palette of max. 16 colors.
+ - Output palette, tiles and tilemap in binary format (for instance, to use with .incbin directives)
+ - Can reduce the total number of tiles by combining similar tiles (see -maxtiles)
+
+At the moment, img2sms always drop duplicates and wil flip tiles if possible to save space.
+
+
+```
+Usage: ./img2sms [options] files...
+
+Convert images to SMS VDP tiles format for VRAM
+
+General / Global options:
+ -h                      Print usage information
+ -v                      Enable verbose output
+ -savecat file.png       Save the tile catalog to a .png
+ -maxtiles count         Try to reduce total tiles by replacing
+                         similar tiles. (lossy)
+ -saveimage file.png     Save the resulting image
+ -savetiles tiles.bin    Save the final tiles (for SMS VDP)
+ -savemap image.map      Save the final tilemap (for SMS VDP)
+ -savepal palette.bin    Save the final palette
+```
+
+My reason for creating something similar to what already existed was that I wanted to test various code building blocks before attempting
+something more complicated (animation). I also wanted to experiment with lossy tile reduction (i.e. combine tiles based on similarity).
+For instance, the image below, even with large undithered areas, still contains too many tiles (568 unique tiles!)
+
+![SMS optimised](images/36fuji_sms.png)
+
+Here is an example where the tile use is being limited to 448 tiles:
+
+`./img2sms images/36fuji_sms.png -savecat images/36fuji_sms_tiles.png -maxtiles 448 -saveimage images/36fuji_sms_reduced.png`
+
+![Tiles reduced](images/36fuji_sms_reduced.png)
+
+Not too bad, but manual touch ups would probably give better results...
+
+The tiles can optionally be saved to a png file, for inspection using the -savecat option:
+
+![Tiles reduced](images/36fuji_sms_reduced.png)
+
+
+See [examples/smsimg.asm](examples/smsimg.asm) for an example SMS program to display the output.
+
 
