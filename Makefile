@@ -9,7 +9,7 @@ WITH_GIF_SUPPORT=1
 
 PROG=paltool png2vga png2cga swpxlt plasmagen dither flicinfo flic2png flicplay flicmerge flicfilter scrollmaker img2sms anim2sms
 OBJS=*.o
-COMMON=palette.o sprite.o builtin_palettes.o rgbimage.o sprite_transform.o util.o
+COMMON=palette.o sprite.o builtin_palettes.o rgbimage.o sprite_transform.o util.o growbuf.o
 
 SDL_CFLAGS=`sdl-config --cflags`
 SDL_LIBS=`sdl-config --libs`
