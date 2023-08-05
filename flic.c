@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "flic.h"
 #include "globals.h"
+#include "growbuf.h"
 
 static uint32_t getLE32(const uint8_t *src, int *off)
 {
@@ -150,6 +151,21 @@ uint32_t writeFlicChunkHeader(FILE *fptr, const struct FlicChunkHeader *src)
 	return 6;
 }
 
+void growbuf_syncChunkHeaderSize(struct growbuf *buf)
+{
+	if (buf->count > 4) {
+		buf->data[0] = buf->count;
+		buf->data[1] = buf->count >> 8;
+		buf->data[2] = buf->count >> 16;
+		buf->data[3] = buf->count >> 24;
+	}
+}
+
+void growbuf_writeFlicChunkHeader(struct growbuf *buf, const struct FlicChunkHeader *src)
+{
+	growbuf_add32le(buf, src->size);
+	growbuf_add16le(buf, src->type);
+}
 
 uint32_t writeFlicChunk(FILE *fptr, uint16_t type, uint8_t *data, uint32_t size)
 {
@@ -182,6 +198,7 @@ printf("Palette chunk payload size: %d\n", pos);
 	return writeFlicChunk(fptr, CHK_COLOR_256, buf, pos);
 }
 
+#if 0
 // Full uncompressed image chunk
 static int write_chunk_copy(FlicFile *ff, const uint8_t *pixels)
 {
@@ -196,6 +213,368 @@ static int write_chunk_copy(FlicFile *ff, const uint8_t *pixels)
 	}
 
 	return hd.size;
+}
+#endif
+
+// Starting at X,Y, count how many changed pixels there are.
+static int count_changed_length(FlicFile *ff, const uint8_t *pixels, int x, int y)
+{
+	int X;
+	int stride = 0;
+
+	for (X=x; X<ff->header.width; X++) {
+		if (pixels[y * ff->pitch + X] == ff->pixels[y * ff->pitch + X]) {
+			return stride;
+		}
+		stride++;
+	}
+
+	return stride;
+}
+
+// Starting at X,Y, count how many consecutive times the same value appears in 'pixels'
+static int count_rle(FlicFile *ff, const uint8_t *pixels, int x, int y)
+{
+	int X;
+	int stride = 1;
+	uint8_t val = pixels[y * ff->pitch + x];
+
+	for (X=x+1; X<ff->header.width; X++) {
+		if (pixels[y * ff->pitch + X] != val) {
+			return stride;
+		}
+		stride++;
+	}
+
+	return stride;
+}
+
+
+// Starting at X,Y, count how many unchanged pixels there are.
+static int count_unchanged_length(FlicFile *ff, const uint8_t *pixels, int x, int y)
+{
+	int X;
+	int stride = 0;
+
+	for (X=x; X<ff->header.width; X++) {
+		if (pixels[y * ff->pitch + X] != ff->pixels[y * ff->pitch + X]) {
+			return stride;
+		}
+		stride++;
+	}
+
+	return stride;
+}
+
+static struct growbuf *build_chunk_copy(FlicFile *ff, const uint8_t *pixels)
+{
+	struct growbuf *buf;
+	struct FlicChunkHeader hd = {
+		.type = CHK_FLI_COPY,
+		.size = 6,
+	};
+
+	buf = growbuf_alloc(65536);
+	if (!buf) {
+		return NULL;
+	}
+
+	hd.size += ff->pixels_allocsize;
+
+	// Reserve space for header now - will be updated at the end
+	growbuf_writeFlicChunkHeader(buf, &hd);
+	growbuf_append(buf, pixels, ff->pixels_allocsize);
+
+	return buf;
+}
+
+static struct growbuf *build_chunk_brun(FlicFile *ff, const uint8_t *pixels)
+{
+	struct growbuf *buf;
+	int y;
+	int cur_x;
+	int pcount_offset;
+	int pcount;
+	int rle;
+	int lit_start;
+	int lit_len;
+	struct FlicChunkHeader hd = {
+		.type = CHK_BYTE_RUN,
+		.size = 6,
+	};
+
+	buf = growbuf_alloc(65536);
+	if (!buf) {
+		return NULL;
+	}
+
+	// Reserve space for header now - will be updated at the end
+	growbuf_writeFlicChunkHeader(buf, &hd);
+
+	for (y=0; y<ff->header.height; y++) {
+
+		// Write a packet count of 0 for now
+		pcount = 0;
+		pcount_offset = buf->count; // save the offset to update it later
+		growbuf_add8(buf, 0);
+
+		// Packet format:
+		// [i8:rle/lit] -> LIT if negative, RLE count if >=0
+
+//		printf("Line %d: ", y);
+		cur_x = 0;
+		lit_start = -1;
+		lit_len = 0;
+		while (cur_x < ff->header.width) {
+			rle = count_rle(ff, pixels, cur_x, y);
+
+			// Encoding RLE takes 2 bytes, so only do if there
+			// is a gain.
+			if (rle > 2) {
+
+				// First flush any open literal stride
+				if (lit_len > 0) {
+					while(lit_len > 127) {
+//						printf("lit127 |");
+						growbuf_add8(buf, -127);		// Packet field 2
+						growbuf_append(buf, pixels + y * ff->pitch + lit_start, 127);
+						lit_start += 127;
+						lit_len -= 127;
+						pcount++;
+					}
+//					printf("lit %d |", lit_len);
+					growbuf_add8(buf, -lit_len);		// Packet field 2
+					growbuf_append(buf, pixels + y * ff->pitch + lit_start, lit_len);
+					lit_start = -1;
+					lit_len = 0;
+				}
+
+				while (rle > 127) {
+//					printf("Rle127 |");
+					growbuf_add8(buf, 127);
+					growbuf_add8(buf, pixels[y*ff->pitch+cur_x]);
+					pcount++;
+					cur_x += 127;
+					rle -= 127;
+				}
+//				printf("RLE %d |", rle);
+				growbuf_add8(buf, rle);
+				growbuf_add8(buf, pixels[y*ff->pitch+cur_x]);
+				pcount++;
+				cur_x += rle;
+			}
+			else {
+				// Add to current literal stride
+				if (lit_start == -1) {
+					lit_start = cur_x;
+					lit_len = 0;
+				}
+				lit_len += rle;
+				cur_x += rle;
+			}
+
+		}
+
+		// line ended with literal stride still open?
+		if (lit_len > 0) {
+//			printf("Final lit -");
+
+			while(lit_len > 127) {
+				growbuf_add8(buf, -127);		// Packet field 2
+				growbuf_append(buf, pixels + y * ff->pitch + lit_start, 127);
+				lit_start += 127;
+				lit_len -= 127;
+				pcount++;
+//				printf("lit127 |");
+			}
+//			printf("lit %d |", lit_len);
+			growbuf_add8(buf, -lit_len);		// Packet field 2
+			growbuf_append(buf, pixels + y * ff->pitch + lit_start, lit_len);
+			lit_start = -1;
+		}
+
+		// Update packet count
+		buf->data[pcount_offset] = pcount;
+//		printf("Pcount=%d\n", pcount);
+	}
+
+	// Update the size field in the chunk header
+	growbuf_syncChunkHeaderSize(buf);
+
+	return buf;
+}
+
+
+static struct growbuf *build_chunk_delta_fli(FlicFile *ff, const uint8_t *pixels)
+{
+	struct growbuf *buf;
+	int y;
+	int first_different_line = -1, last_different_line = -1;
+	int lines_in_chunk;
+	int x;
+	int cur_x;
+	int first_different_x;
+	int pcount_offset;
+	int pcount;
+	int stride;
+//	int rle;
+	struct FlicChunkHeader hd = {
+		.type = CHK_DELTA_FLI,
+		.size = 6,
+	};
+
+	for (y=0; y<ff->header.height; y++) {
+		if (memcmp(pixels + y * ff->pitch,
+					ff->pixels + y * ff->pitch,
+					ff->header.width))
+		{
+			if (first_different_line < 0) {
+				first_different_line = y;
+			}
+			last_different_line = y;
+		}
+	}
+
+	// all identical - frame should be skipped
+	if (first_different_line == -1) {
+		return NULL;
+	}
+
+	buf = growbuf_alloc(65536);
+	if (!buf) {
+		return NULL;
+	}
+
+	// Reserve space for header now - will be updated at the end
+	growbuf_writeFlicChunkHeader(buf, &hd);
+
+	lines_in_chunk = last_different_line-first_different_line+1;
+
+//	printf("[deltafli] Lines %d-%d different [total %d lines]\n",
+//		first_different_line, last_different_line, lines_in_chunk);
+
+	growbuf_add16le(buf, first_different_line);
+	growbuf_add16le(buf, lines_in_chunk);
+
+	for (y=first_different_line; y<first_different_line+lines_in_chunk; y++) {
+
+		// Find the first different pixel in the line
+		first_different_x = -1;
+		for (x=0; x<ff->header.width; x++) {
+			if (pixels[y*ff->pitch+x] != ff->pixels[y*ff->pitch+x]) {
+				first_different_x = x;
+				break;
+			}
+		}
+
+		// Write a packet count of 0 for now
+		pcount = 0;
+		pcount_offset = buf->count; // save the offset to update it later
+		growbuf_add8(buf, 0);
+
+		// Lines that are identical have a packet count of 0, just continue
+		if (first_different_x == -1) {
+			continue;
+		}
+
+		// Packet format:
+		// [u8:skip]    -> Columns to skip
+		// [i8:rle/lit] -> RLE if negative, LIT count if >=0. (can be 0)
+
+//		printf("Line %d: ", y);
+		cur_x = 0;
+		while (cur_x < ff->header.width) {
+//			printf(" (%d) ", cur_x);
+
+			stride = count_unchanged_length(ff, pixels, cur_x, y);
+//			printf("skip %d | ", stride);
+			cur_x += stride;
+
+			while (stride > 255) {
+				growbuf_add8(buf, 255); // Skip 255 columns
+				growbuf_add8(buf, 0); // No LIT/RLE
+				pcount++;
+				stride -= 255;
+			}
+
+			growbuf_add8(buf, stride);		// Packet field 1
+
+			// TODO : Detect fills (RLE)
+			//
+//			printf(" {%d} ", cur_x);
+			stride = count_changed_length(ff, pixels, cur_x, y);
+//			rle = count_rle(ff, pixels, cur_x, y);
+
+			while (stride > 127) {
+				growbuf_add8(buf, 127);
+				// Copy literal data
+				growbuf_append(buf, pixels + y * ff->pitch + cur_x, 127);
+				cur_x += 127;
+				stride -= 127;
+				pcount++;
+
+				// Prepare next packet
+				growbuf_add8(buf, 0); // skip of 0
+			}
+
+			growbuf_add8(buf, stride);		// Packet field 2
+			growbuf_append(buf, pixels + y * ff->pitch + cur_x, stride);
+			cur_x += stride;
+			pcount++;
+
+			buf->data[pcount_offset] = pcount;
+		}
+//		printf(" -- packet cound: %d\n", pcount);
+
+	}
+
+	// Update the size field in the chunk header
+	growbuf_syncChunkHeaderSize(buf);
+
+	return buf;
+}
+
+#define FIRST_FRAME	1
+
+static struct growbuf *build_best_frame_chunk(FlicFile *ff, const uint8_t *pixels, int is_first)
+{
+	struct growbuf *tmp, *best = NULL;
+	struct growbuf *versions[8];
+	int n = 0, i;
+
+	// Encode potential chunk types for given frame.
+	if ((tmp = build_chunk_copy(ff, pixels))) {
+		versions[n] = tmp; n++;
+	}
+	if ((tmp = build_chunk_brun(ff, pixels))) {
+		versions[n] = tmp; n++;
+	}
+
+	// Delta compression not possible for first frame...
+	if (!is_first) {
+		if ((tmp = build_chunk_delta_fli(ff, pixels))) {
+			versions[n] = tmp; n++;
+		}
+	}
+
+	// Now pick the best (smallest) variation
+	for (i=0; i<n; i++) {
+		if (!best) {
+			best = versions[i];
+		} else {
+			if (versions[i]->count < best->count) {
+				best = versions[i];
+			}
+		}
+	}
+
+	// Free non-selected variations
+	for (i=0; i<n; i++) {
+		if (best != versions[i])
+			growbuf_free(versions[i]);
+	}
+
+	return best;
 }
 
 int readFrameHeader(FILE *fptr, struct FlicFrameHeader *dst)
@@ -1039,6 +1418,7 @@ int flic_appendFrame(FlicFile *ff, uint8_t *pixels, palette_t *palette)
 		.size = 6,
 	};
 	long headeroff, endoff;
+	struct growbuf *chunk = NULL;
 
 	if (fseek(ff->fptr, 0, SEEK_END)) {
 		perror("could not seek");
@@ -1061,20 +1441,36 @@ int flic_appendFrame(FlicFile *ff, uint8_t *pixels, palette_t *palette)
 	}
 
 	// Output a BRUN or COPY chunk on the first frame as we are starting from nothing.
+	// TODO: BLACK
 	if (ff->header.frames == 0) {
+		chunk = build_best_frame_chunk(ff, pixels, FIRST_FRAME);
+		if (!chunk)
+			return -1;
+
+		growbuf_writeToFPTR(chunk, ff->fptr);
+		frameHeader.size += chunk->count;
 		frameHeader.chunks++;
-		frameHeader.size += write_chunk_copy(ff, pixels);
+
 		// update the "last image" for future comparison
 		memcpy(ff->pixels, pixels, ff->pixels_allocsize);
+
+		growbuf_free(chunk);
 	} else {
-		// Otherwise, if a difference was detected, output the most efficient chunk
-		// type (TODO!) for now it is all uncompressed
+		// Otherwise, if a difference was detected, output the most efficient chunk type
 		if (memcmp(ff->pixels, pixels, ff->pixels_allocsize) || ff->header.frames == 0) {
+
+			chunk = build_best_frame_chunk(ff, pixels, !FIRST_FRAME);
+			if (!chunk)
+				return -1;
+
+			growbuf_writeToFPTR(chunk, ff->fptr);
+			frameHeader.size += chunk->count;
 			frameHeader.chunks++;
-			frameHeader.size += write_chunk_copy(ff, pixels);
 
 			// update the "last image" for future comparison
 			memcpy(ff->pixels, pixels, ff->pixels_allocsize);
+
+			growbuf_free(chunk);
 		}
 	}
 
