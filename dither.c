@@ -58,8 +58,10 @@ struct colorStats {
 	int num_used;
 };
 
+#define FLG_NONE	0
+#define FLG_NOSORT	1
 
-struct colorStats *getColorStats(rgbimage_t *img, struct colorStats *reuse)
+struct colorStats *getColorStats(rgbimage_t *img, struct colorStats *reuse, uint32_t flags)
 {
 	int i, idx;
 	struct colorStats *stats;
@@ -95,11 +97,13 @@ struct colorStats *getColorStats(rgbimage_t *img, struct colorStats *reuse)
 		stats->countbuf[idx]++;
 	}
 
-	// Set global for comparison function
-	tmp_countbuf = stats->countbuf;
+	if (!(flags & FLG_NOSORT)) {
+		// Set global for comparison function
+		tmp_countbuf = stats->countbuf;
 
-	// Sort
-	qsort(stats->usedlist, stats->num_used, sizeof(int), compareUsed);
+		// Sort
+		qsort(stats->usedlist, stats->num_used, sizeof(int), compareUsed);
+	}
 
 	return stats;
 }
@@ -124,7 +128,7 @@ int countColors(rgbimage_t *img)
 	struct colorStats *stats;
 	int c;
 
-	stats = getColorStats(img, NULL);
+	stats = getColorStats(img, NULL, FLG_NOSORT);
 	if (!stats) {
 		return -1;
 	}
@@ -229,7 +233,7 @@ int reduceColors(rgbimage_t *img, int max)
 		if (stats) { free(stats); }
 		stats = getColorStats(img, NULL);
 #else
-		stats = getColorStats(img, stats);
+		stats = getColorStats(img, stats, FLG_NONE);
 #endif
 		if (!stats) {
 			return -1;
@@ -272,7 +276,7 @@ int makePalette(rgbimage_t *img, palette_t *outpal)
 	struct colorStats *stats = NULL;
 	int i;
 
-	stats = getColorStats(img, NULL);
+	stats = getColorStats(img, NULL, FLG_NOSORT);
 	if (stats->num_used > 256) {
 		fprintf(stderr, "Too many colors. Please quantize first\n");
 		free(stats);
@@ -307,6 +311,7 @@ enum {
 	OPT_REDUCECOLORS,
 	OPT_MAKEPAL,
 	OPT_LOADPAL,
+	OPT_SAVEPAL,
 	OPT_DITHER,
 	OPT_ALGO,
 };
@@ -326,6 +331,7 @@ static struct option long_options[] = {
 	{ "reducecolors", required_argument, 0, OPT_REDUCECOLORS },
 	{ "makepal",	no_argument, 0, OPT_MAKEPAL },
 	{ "loadpal",	required_argument, 0, OPT_LOADPAL },
+	{ "savepal",	required_argument, 0, OPT_SAVEPAL },
 	{ "dither",		no_argument, 0, OPT_DITHER },
 	{ "algo",		required_argument, 0, OPT_ALGO },
 	{ }
@@ -357,6 +363,7 @@ void printHelp(void)
 	printf(" -reducecolors max  Remove less used colors until unique colors <= max\n");
 	printf(" -makepal           Build palette from current image (max 256 colors)\n");
 	printf(" -loadpal file      Load palette from file\n");
+	printf(" -savepal file      Save current palette to file (gimp .GPL format)\n");
 	printf(" -dither            Dither the current using palette (-makepal or -loadpal)\n");
 	printf(" -algo name         Set the dithering algorithm to use.\n");
 	printf("                    (Default: %s)\n", getDitherAlgoShortName(DEFAULT_DITHER_ALGO));
@@ -507,7 +514,7 @@ int main(int argc, char **argv)
 					fprintf(stderr ,"No image loaded\n");
 					return -1;
 				}
-				stats = getColorStats(image_in, NULL);
+				stats = getColorStats(image_in, NULL, FLG_NONE);
 				printColorStats(stats);
 				free(stats);
 				break;
@@ -540,6 +547,22 @@ int main(int argc, char **argv)
 					palette_print(&refpal);
 				}
 
+				break;
+
+			case OPT_SAVEPAL:
+				if (refpal.count == 0) {
+					fprintf(stderr, "Palette not loaded/defined\n");
+					return -1;
+				}
+
+				res = palette_save(optarg, &refpal, PALETTE_FORMAT_GIMP , "palette");
+				if (res < 0) {
+					fprintf(stderr,"Failed to write palette\n");
+					return -1;
+				}
+				if (g_verbose) {
+					printf("Saved palette to: %s\n", optarg);
+				}
 				break;
 
 			case OPT_MAKEPAL:
