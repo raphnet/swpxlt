@@ -6,7 +6,7 @@
 
 #include <png.h>
 
-int convertPNG(FILE *fptr_in, FILE *fptr_out, int append_palette, int value_offset, int black_trick);
+int convertPNG(FILE *fptr_in, FILE *fptr_out, int append_palette, int value_offset, int black_trick, int for_mode_x);
 
 static void printusage(void)
 {
@@ -17,6 +17,7 @@ static void printusage(void)
 	printf("  -p            Append palette data\n");
 	printf("  -b            Rewrite black pixel values to 0\n");
 	printf("  -o value      Offset for pixel values\n");
+	printf("  -x            Output in planar format for mode X\n");
 	printf("\n");
 	printf("\n");
 	printf("input_file must be a 8-bit color PNG file.\n");
@@ -31,8 +32,9 @@ int main(int argc, char **argv)
 	int append_palette = 0;
 	int value_offset = 0;
 	int black_trick = 0;
+	int for_mode_x = 0;
 
-	while ((opt = getopt(argc, argv, "hpo:b")) != -1) {
+	while ((opt = getopt(argc, argv, "hpo:bx")) != -1) {
 		switch (opt)
 		{
 			case 'h':
@@ -43,6 +45,9 @@ int main(int argc, char **argv)
 				break;
 			case 'b':
 				black_trick = 1;
+				break;
+			case 'x':
+				for_mode_x = 1;
 				break;
 			case 'o':
 				value_offset = atoi(optarg);
@@ -91,7 +96,7 @@ int main(int argc, char **argv)
 		goto done;
 	}
 
-	ret = convertPNG(fptr_in, fptr_out, append_palette, value_offset, black_trick);
+	ret = convertPNG(fptr_in, fptr_out, append_palette, value_offset, black_trick, for_mode_x);
 
 done:
 	if (fptr_out) {
@@ -105,7 +110,19 @@ done:
 	return ret;
 }
 
-int convertPNG(FILE *fptr_in, FILE *fptr_out, int append_palette, int value_offset, int black_trick)
+static void writePlanar4(const uint8_t *dat, int count, FILE *outfptr)
+{
+	int i,j;
+	int pc = count/4;
+
+	for (i=0; i<4; i++) {
+		for (j=0; j<pc; j++) {
+			fwrite(dat + i +  j * 4, 1, 1, outfptr);
+		}
+	}
+}
+
+int convertPNG(FILE *fptr_in, FILE *fptr_out, int append_palette, int value_offset, int black_trick, int for_mode_x)
 {
 	png_structp png_ptr;
 	png_infop info_ptr;
@@ -165,38 +182,66 @@ int convertPNG(FILE *fptr_in, FILE *fptr_out, int append_palette, int value_offs
 		goto done;
 	}
 
-	switch(depth)
-	{
-		case 8:
-			for (y=0; y<h; y++) {
-				if ((value_offset == 0) && !black_trick) {
-					fwrite(row_pointers[y], w, 1, fptr_out);
-				} else {
-					uint8_t tmp;
-					for (x=0; x<w; x++) {
-						tmp = row_pointers[y][x];
+	if (depth != 8) {
+		fprintf(stderr, "Unimplemented color depth\n");
+		return -1;
+	}
 
-						if (black_trick) {
-							// black!
-							if ((palette[tmp].red + palette[tmp].green + palette[tmp].blue)<5) {
-								tmp = 0; // no offset
-							} else {
-								tmp += value_offset;
-							}
+	if (!for_mode_x)
+	{
+		for (y=0; y<h; y++) {
+			if ((value_offset == 0) && !black_trick) {
+				fwrite(row_pointers[y], w, 1, fptr_out);
+			} else {
+				uint8_t tmp;
+				for (x=0; x<w; x++) {
+					tmp = row_pointers[y][x];
+
+					if (black_trick) {
+						// black!
+						if ((palette[tmp].red + palette[tmp].green + palette[tmp].blue)<5) {
+							tmp = 0; // no offset
 						} else {
 							tmp += value_offset;
 						}
-
-						fwrite(&tmp, 1, 1, fptr_out);
+					} else {
+						tmp += value_offset;
 					}
+
+					fwrite(&tmp, 1, 1, fptr_out);
 				}
 			}
-			break;
-
-		default:
-			fprintf(stderr, "Unimplemented color depth\n");
+		}
+	}
+	else { // for mode x
+		if ((w & 3) != 0) {
+			fprintf(stderr, "Width must be a multiple of 4\n");
 			return -1;
+		}
 
+		for (y=0; y<h; y++) {
+			uint8_t tmp;
+			uint8_t rowbuf[w];
+
+			for (x=0; x<w; x++) {
+				tmp = row_pointers[y][x];
+
+				if (black_trick) {
+					// black!
+					if ((palette[tmp].red + palette[tmp].green + palette[tmp].blue)<5) {
+						tmp = 0; // no offset
+					} else {
+						tmp += value_offset;
+					}
+				} else {
+					tmp += value_offset;
+				}
+
+				rowbuf[x] = tmp;
+			}
+
+			writePlanar4(rowbuf, w, fptr_out);
+		}
 	}
 
 	if (append_palette) {
