@@ -558,6 +558,30 @@ int palette_output_animator_col(FILE *fptr, palette_t *pal)
 	return 0;
 }
 
+int palette_output_gimp(FILE *fptr, palette_t *pal, const char *name)
+{
+	int i;
+	char colorname[16];
+
+	fprintf(fptr, "GIMP Palette\n");
+	fprintf(fptr, "Name: %s\n", name);
+	//fprintf(fptr, "Columns: 8\n");
+	fprintf(fptr, "#\n");
+
+	for (i=0; i<pal->count; i++) {
+		snprintf(colorname, 16, "Index %d", i);
+		fprintf(fptr, "%3d %3d %3d %s\n",
+			pal->colors[i].r,
+			pal->colors[i].g,
+			pal->colors[i].b,
+			colorname);
+
+	}
+
+	return 0;
+}
+
+
 int palette_saveFPTR(FILE *outfptr, palette_t *src, uint8_t format, const char *name)
 {
 	switch (format)
@@ -572,6 +596,8 @@ int palette_saveFPTR(FILE *outfptr, palette_t *src, uint8_t format, const char *
 			return palette_output_animator_col(outfptr, src);
 		case PALETTE_FORMAT_ANIMATOR_PRO:
 			return palette_output_animator_pro_col(outfptr, src);
+		case PALETTE_FORMAT_GIMP:
+			return palette_output_gimp(outfptr, src, name);
 	}
 
 	return -1;
@@ -608,6 +634,7 @@ int palette_parseOutputFormat(const char *arg)
 	if (0 == strcasecmp(arg, "animator_pro")) { return PALETTE_FORMAT_ANIMATOR_PRO; }
 	if (0 == strcasecmp(arg, "sms_wladx")) { return PALETTE_FORMAT_SMS_WLADX; }
 	if (0 == strcasecmp(arg, "sms_bin")) { return PALETTE_FORMAT_SMS_BIN; }
+	if (0 == strcasecmp(arg, "gimp")) { return PALETTE_FORMAT_GIMP; }
 	return PALETTE_FORMAT_NONE;
 }
 
