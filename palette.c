@@ -107,7 +107,6 @@ void palette_addColor(palette_t * pal, int r, int g, int b)
 {
 	if (pal->count < 256) {
 		palette_setColor(pal, pal->count, r, g, b);
-		pal->count++;
 	}
 }
 
@@ -183,7 +182,6 @@ int palette_loadGimpPalette(const char *filename, palette_t *dst)
 				palette_addColor(dst, r, g, b);
 			}
 		}
-
 		linecount++;
 	}
 
@@ -366,6 +364,8 @@ int palette_load(const char *filename, palette_t *dst)
 		memcpy(dst, builtin, sizeof(palette_t));
 		return 0;
 	}
+
+	palette_clear(&src);
 
 	for (i=0; paletteLoaders[i].load; i++) {
 		if (g_verbose) {
