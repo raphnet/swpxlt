@@ -544,8 +544,12 @@ For instance, to create 16 sprites rotated at 22.5 degrees intervals, with horiz
 `
 ./prerot intput.png output.png -r 22.5 -f 16 -z -a
 `
+
+Result:
+
 ![Prerotate example](images/prerot_example.png)
-(art by VolcanLoup - used in ![Goblin Kart Recue](https://raphnet.itch.io/goblin-kart-rescue) )
+
+(art by VolcanLoup - used in [Goblin Kart Recue](https://raphnet.itch.io/goblin-kart-rescue) )
 
 Rotating low resolution pixel art at angles other than 90,180 and 270 is quite lossy and destructive, so prerot uses the
 Nice2x algorithm (it's similar to RotSprite - see swpxlt description above) to hopefully get less than catastrophic results.
