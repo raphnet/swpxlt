@@ -23,9 +23,10 @@ void printHelp(void)
 	printf(" -O offset         Define offset for next set color or palette import\n");
 	printf("                   (default 0)\n");
 	printf(" -i input          Input file\n");
-	printf(" -o filename       Output file\n");
+	printf(" -o filename       Output file (when unspecified, simply displays palette)\n");
 	printf(" -f format         Output format\n");
 	printf(" -n symbol_name    Symbol name for assembly output\n");
+	printf(" -x                Use Xterm-256 to display palette in color (if -o is omitted)\n");
 	printf("\n");
 	printf("Palette generation:\n");
 	printf(" -I offset         Source palette offset (for copying/editing ranges)\n");
