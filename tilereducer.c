@@ -6,7 +6,7 @@ int tilereducer_reduceTo(tilemap_t *tm, tilecatalog_t *cat, palette_t *pal, int 
 {
 	struct tileUseEntry *entries = NULL;
 	int count, i,j;
-	uint32_t difference, best_difference;
+	uint32_t difference, best_difference = -1;
 	int best_index1 = 0, best_index2 = 1;
 	int first;
 	uint8_t best_flags = 0;
