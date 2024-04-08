@@ -19,6 +19,9 @@ enum {
 	ROT_ALGO_NICE8X, // Scale2x thrice, rotate, then scale 1/8
 };
 
+int performRotateOperation(const sprite_t *spr_orig, sprite_t *spr_dst, int algo, double angle);
+
+int performScaleOperation(const sprite_t *spr_orig, sprite_t *spr_dst, int algo, double factor);
 
 sprite_t *createScaledSprite(const sprite_t *spr_orig, int algo, double factor);
 sprite_t *createRotatedSprite(const sprite_t *spr_orig, int algo, double angle);

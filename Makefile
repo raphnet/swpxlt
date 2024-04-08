@@ -7,9 +7,9 @@ LDFLAGS=`libpng-config --libs` -lm
 WITH_GIF_SUPPORT=1
 
 
-PROG=paltool png2vga png2cga swpxlt plasmagen dither flicinfo flic2png flicplay flicmerge flicfilter scrollmaker img2sms anim2sms
+PROG=paltool png2vga png2cga swpxlt plasmagen dither flicinfo flic2png flicplay flicmerge flicfilter scrollmaker img2sms anim2sms prerot
 OBJS=*.o
-COMMON=palette.o sprite.o builtin_palettes.o rgbimage.o sprite_transform.o util.o growbuf.o
+COMMON=palette.o sprite.o builtin_palettes.o rgbimage.o sprite_transform.o util.o growbuf.o swpxlt.o
 
 SDL_CFLAGS=`sdl-config --cflags`
 SDL_LIBS=`sdl-config --libs`
@@ -34,7 +34,10 @@ png2vga: png2vga.o
 png2cga: png2cga.o
 	$(LD) $(LDFLAGS) $^ -o $@
 
-swpxlt: swpxlt.o $(COMMON)
+swpxlt: swpxlt_main.o $(COMMON)
+	$(LD) $(LDFLAGS) $^ -o $@
+
+prerot: prerot.o $(COMMON)
 	$(LD) $(LDFLAGS) $^ -o $@
 
 dither: dither.o $(COMMON)
