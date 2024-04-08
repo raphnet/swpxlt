@@ -42,6 +42,7 @@ On a Debian system, besides the obvious (gcc, make, etc) you need:
  - flicfilter : Read a FLI/FLC or Animated GIF, apply some transformations, then output a new FLC file
  - flicplay : FLI/FLC playback tool using SDL
  - img2sms : Converts a single image to the SMS (Sega Master System) format
+ - prerot : Sprite pre-rotation tool (to create copies of a sprite at a series of angle)
 
 ### swpxlt
 
@@ -528,4 +529,32 @@ The tiles can optionally be saved to a png file, for inspection using the -savec
 
 See [examples/smsimg.asm](examples/smsimg.asm) for an example SMS program to display the output.
 
+
+### prerot
+
+prerot (pre-rotate) is a simple command-line tool for quicky creating a series of rotated sprites. prerot takes one
+sprite in argument and write a sequence of rotated versions to an output file.
+
+When developing games for hardware without support for arbitrary sprite rotation (or no rotation at all) it is often necessary
+to have a series of drawings made in advance for each angle. Good examples would be a spinning ball, or a car sprite in a top-down
+view racer.
+
+For instance, to create 16 sprites rotated at 22.5 degrees intervals, with horizontal output layout:
+
+`
+./prerot intput.png output.png -r 22.5 -f 16 -z -a
+`
+![Prerotate example](images/prerot_example.png)
+(art by VolcanLoup - used in ![Goblin Kart Recue](https://raphnet.itch.io/goblin-kart-rescue) )
+
+Rotating low resolution pixel art at angles other than 90,180 and 270 is quite lossy and destructive, so prerot uses the
+Nice2x algorithm (it's similar to RotSprite - see swpxlt description above) to hopefully get less than catastrophic results.
+
+Additionally, rotation often breaks the 1 pixel black border common on sprites, and this stands out a lot during animation and
+depending on the in-game background... So prerot has an option to automatically fix the border (-a).
+
+![Contour auto-fix](images/autofix_contour.png)
+
+This is not perfect of course, but the generated output could be a good starting point or reference for the artist. In some cases,
+only a few manual adjustment may be required.
 
