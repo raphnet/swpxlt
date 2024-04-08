@@ -592,6 +592,15 @@ int sprite_getPixelMask(const sprite_t *spr, int x, int y)
 	return spr->mask[y * spr->w + x];
 }
 
+int sprite_pixelIsOpaque(const sprite_t *spr, int x, int y)
+{
+	if (spr->flags & SPRITE_FLAG_USE_TRANSPARENT_COLOR) {
+		return sprite_getPixel(spr, x, y) != spr->transparent_color;
+	} else {
+		return sprite_getPixelMask(spr, x, y);
+	}
+}
+
 int sprite_copyPalette(const sprite_t *spr_src, sprite_t *spr_dst)
 {
 	memcpy(&spr_dst->palette, &spr_src->palette, sizeof(palette_t));
