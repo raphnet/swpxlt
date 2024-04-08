@@ -333,8 +333,8 @@ uint32_t tilecat_getDifferenceScore(tilecatalog_t *tc, uint32_t tile1, uint32_t 
 	uint8_t buf[64];
 	uint8_t *src;
 	int j;
-	uint32_t best_score;
-	uint8_t best_flags;
+	uint32_t best_score = 0;
+	uint8_t best_flags = 0;
 	uint8_t cur_flags;
 
 	for (j=0; j<4; j++)
@@ -403,7 +403,7 @@ void tilecat_mixTiles(tilecatalog_t *tc, uint32_t tile1, uint32_t tile2)
 static void convert8bppTo2bppPlanar(const uint8_t src[64], uint8_t dst[32])
 {
 	int row, col;
-	uint8_t ob, bit;
+	uint8_t ob = 0, bit;
 	int i;
 
 	i = 0;

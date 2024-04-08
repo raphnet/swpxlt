@@ -187,7 +187,7 @@ int encoder_panOptimize(encoder_t *enc, sprite_t *img)
 	int toadd[PANX_SEARCHWIDTH*2+1];
 	int matching[PANX_SEARCHWIDTH*2+1];
 	int idx, pan, i;
-	int bestadd, bestmatch;
+	int bestadd = 0, bestmatch;
 	sprite_t *panimg;
 	int searchwidth = PANX_SEARCHWIDTH;
 	int searchstart = -PANX_SEARCHWIDTH;
