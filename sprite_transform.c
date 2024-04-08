@@ -177,3 +177,96 @@ void sprite_rotate(const sprite_t *src, sprite_t *dst, double angle)
 		}
 	}
 }
+
+
+/* If pixel at X/Y is opaque (not transparent) and the color
+ * is not 'black color', force the color to 'black color' */
+static void fixPixel(sprite_t *spr, int x, int y, int black_color)
+{
+	int mask;
+
+	if (spr->flags & SPRITE_FLAG_USE_TRANSPARENT_COLOR) {
+		if (sprite_getPixel(spr, x, y) != spr->transparent_color) {
+			sprite_setPixel(spr, x, y, black_color);
+		}
+	} else {
+		if ((mask = sprite_getPixelMask(spr, x, y))) {
+			sprite_setPixel(spr, x, y, black_color);
+		}
+	}
+}
+
+// For case where a (hopefully) very small part (one pixel) of the sprite gets clipped
+// and looses part of its black contour, this forces the border pixel to black.
+static int sprite_fixupBlackContour(sprite_t *spr)
+{
+	int x, y;
+	int black;
+
+	black = palette_findBestMatch(&spr->palette, 0, 0, 0, COLORMATCH_METHOD_DEFAULT);
+
+	for (x=0; x<spr->w; x++) {
+		fixPixel(spr, x, 0, black);
+		fixPixel(spr, x, spr->h-1, black);
+	}
+	for (y=0; y<spr->h; y++) {
+		fixPixel(spr, 0, y, black);
+		fixPixel(spr, spr->w-1, y, black);
+	}
+
+	return 0;
+}
+
+static void setTransparentNbrsTo(sprite_t *spr, int x, int y, int black)
+{
+	if (x > 0) {
+		if (!sprite_pixelIsOpaque(spr, x-1, y)) {
+			sprite_setPixel(spr, x-1, y, black);
+		}
+	}
+	if (x < spr->w-1) {
+		if (!sprite_pixelIsOpaque(spr, x+1, y)) {
+			sprite_setPixel(spr, x+1, y, black);
+		}
+	}
+	if (y > 0) {
+		if (!sprite_pixelIsOpaque(spr, x, y-1)) {
+			sprite_setPixel(spr, x, y-1, black);
+		}
+	}
+	if (y < spr->h-1) {
+		if (!sprite_pixelIsOpaque(spr, x, y+1)) {
+			sprite_setPixel(spr, x, y+1, black);
+		}
+	}
+}
+
+/*
+ * Look at pixels that are opaque but not black. If
+ * that pixel has a transparent neighbor, set it to black.
+ *
+ */
+void sprite_autoBlackContour(sprite_t *spr)
+{
+	int x, y;
+	int black;
+
+	black = palette_findBestMatch(&spr->palette, 0, 0, 0, COLORMATCH_METHOD_DEFAULT);
+
+	for (y=0; y<spr->h; y++) {
+		for (x=0; x<spr->w; x++) {
+			if (!sprite_pixelIsOpaque(spr, x, y))
+				continue;
+			if (sprite_getPixel(spr, x, y) == black)
+				continue;
+
+			// Set non-opaque neighbors of this pixel to black.
+			setTransparentNbrsTo(spr, x, y, black);
+		}
+	}
+
+	// the above can leave non-black pixels on the border. Handle
+	// this.
+	sprite_fixupBlackContour(spr);
+}
+
