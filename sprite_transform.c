@@ -147,19 +147,17 @@ void sprite_rotate(const sprite_t *src, sprite_t *dst, double angle)
 	int x,y;
 	uint8_t pixel, mask;
 	double rads = angle * (M_PI * 2) / 360.0;
-	double xc, yc;
+	double xc, yc; // center of rotation
 	double matrix[2][2] = {
 		{ cos(rads), -sin(rads) },
 		{ sin(rads), cos(rads) },
 	};
 	double v[2];
 	double res[2];
+	int src_x, src_y;
 
-	// Center of rotation
-	xc = (src->w / 2) - 0.5;
-	yc = (src->h / 2) - 0.5;
-
-	printf("Center of rotation: %.2f , %.2f \n", xc, yc);
+	xc = src->w / 2.0 - 0.5;
+	yc = src->h / 2.0 - 0.5;
 
 	for (y=0; y<dst->h; y++) {
 		for (x=0; x<dst->w; x++) {
@@ -168,14 +166,14 @@ void sprite_rotate(const sprite_t *src, sprite_t *dst, double angle)
 			v[1] = y-yc;
 			applyMatrix(matrix, v, res);
 
-			pixel = sprite_getPixelSafe(src, res[0] + xc, res[1] + yc);
-			mask = sprite_getPixelMaskSafe(src, res[0] + xc, res[1] + yc);
+			src_x = round(res[0] + xc);
+			src_y = round(res[1] + yc);
+
+			pixel = sprite_getPixelSafe(src, src_x, src_y);
+			mask = sprite_getPixelMaskSafe(src, src_x, src_y);
 
 			sprite_setPixelSafe(dst, x, y, pixel);
 			sprite_setPixelMaskSafe(dst, x, y, mask);
 		}
 	}
-
-
-
 }
