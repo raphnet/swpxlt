@@ -198,12 +198,9 @@ static void fixPixel(sprite_t *spr, int x, int y, int black_color)
 
 // For case where a (hopefully) very small part (one pixel) of the sprite gets clipped
 // and looses part of its black contour, this forces the border pixel to black.
-static int sprite_fixupBlackContour(sprite_t *spr)
+static int sprite_fixupBlackContour(sprite_t *spr, int black)
 {
 	int x, y;
-	int black;
-
-	black = palette_findBestMatch(&spr->palette, 0, 0, 0, COLORMATCH_METHOD_DEFAULT);
 
 	for (x=0; x<spr->w; x++) {
 		fixPixel(spr, x, 0, black);
@@ -222,21 +219,25 @@ static void setTransparentNbrsTo(sprite_t *spr, int x, int y, int black)
 	if (x > 0) {
 		if (!sprite_pixelIsOpaque(spr, x-1, y)) {
 			sprite_setPixel(spr, x-1, y, black);
+			sprite_setPixelMask(spr, x-1, y, 0xff);
 		}
 	}
 	if (x < spr->w-1) {
 		if (!sprite_pixelIsOpaque(spr, x+1, y)) {
 			sprite_setPixel(spr, x+1, y, black);
+			sprite_setPixelMask(spr, x+1, y, 0xff);
 		}
 	}
 	if (y > 0) {
 		if (!sprite_pixelIsOpaque(spr, x, y-1)) {
 			sprite_setPixel(spr, x, y-1, black);
+			sprite_setPixelMask(spr, x, y-1, 0xff);
 		}
 	}
 	if (y < spr->h-1) {
 		if (!sprite_pixelIsOpaque(spr, x, y+1)) {
 			sprite_setPixel(spr, x, y+1, black);
+			sprite_setPixelMask(spr, x, y+1, 0xff);
 		}
 	}
 }
@@ -251,7 +252,13 @@ void sprite_autoBlackContour(sprite_t *spr)
 	int x, y;
 	int black;
 
-	black = palette_findBestMatch(&spr->palette, 0, 0, 0, COLORMATCH_METHOD_DEFAULT);
+	if (spr->flags & SPRITE_FLAG_USE_TRANSPARENT_COLOR) {
+		black = palette_findBestMatchExcluding(&spr->palette, 0, 0, 0, spr->transparent_color, COLORMATCH_METHOD_DEFAULT);
+	} else {
+		black = palette_findBestMatch(&spr->palette, 0, 0, 0, COLORMATCH_METHOD_DEFAULT);
+	}
+
+	printf("Black index: %d\n", black);
 
 	for (y=0; y<spr->h; y++) {
 		for (x=0; x<spr->w; x++) {
@@ -267,6 +274,6 @@ void sprite_autoBlackContour(sprite_t *spr)
 
 	// the above can leave non-black pixels on the border. Handle
 	// this.
-	sprite_fixupBlackContour(spr);
+	sprite_fixupBlackContour(spr, black);
 }
 
