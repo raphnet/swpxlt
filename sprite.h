@@ -52,6 +52,8 @@ void sprite_setPixelMaskSafe(sprite_t *spr, int x, int y, int value);
 int sprite_getPixelMask(const sprite_t *spr, int x, int y);
 int sprite_getPixelMaskSafe(const sprite_t *spr, int x, int y);
 
+int sprite_pixelIsOpaque(const sprite_t *spr, int x, int y);
+
 void sprite_applyPalette(sprite_t *sprite, const palette_t *newpal);
 int sprite_copyPalette(const sprite_t *spr_src, sprite_t *spr_dst);
 int sprite_remapPalette(sprite_t *sprite, const palette_t *dstpal);
