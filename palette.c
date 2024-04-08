@@ -209,15 +209,17 @@ int palette_findBestMatchExcluding(const palette_t *pal, int r, int g, int b, in
 	int best_dist;
 	int dist;
 	int i;
+	int first = 1;
 
 	for (i=0; i<pal->count; i++) {
 		if (i == exclude)
 			continue;
 		dist = getColorDistance(pal->colors[i].r, pal->colors[i].g, pal->colors[i].b, r, g, b);
 
-		if (i==0) {
+		if (first) {
 			best_index = i;
 			best_dist = dist;
+			first = 0;
 		} else {
 			if (dist < best_dist) {
 				best_dist = dist;
@@ -236,13 +238,15 @@ int palette_findBestMatch(const palette_t *pal, int r, int g, int b, int method)
 	int best_dist;
 	int dist;
 	int i;
+	int first = 1;
 
 	for (i=0; i<pal->count; i++) {
 		dist = getColorDistance(pal->colors[i].r, pal->colors[i].g, pal->colors[i].b, r, g, b);
 
-		if (i==0) {
+		if (first) {
 			best_index = i;
 			best_dist = dist;
+			first = 0;
 		} else {
 			if (dist < best_dist) {
 				best_dist = dist;
