@@ -39,6 +39,7 @@ enum {
 int palette_parseOutputFormat(const char *arg);
 
 int palette_findBestMatch(const palette_t *pal, int r, int g, int b, int method);
+int palette_findBestMatchExcluding(const palette_t *pal, int r, int g, int b, int exclude, int method);
 void palette_setColor(palette_t * pal, uint8_t index, int r, int g, int b);
 void palette_addColor(palette_t * pal, int r, int g, int b);
 void palette_addColorEnt(palette_t *pal, palent_t *entry);

@@ -203,6 +203,33 @@ static int getColorDistance(uint8_t r1, uint8_t g1, uint8_t b1, uint8_t r2, uint
 	return sqrt( (r2-r1)*(r2-r1) + (g2-g1)*(g2-g1) + (b2-b1)*(b2-b1)	);
 }
 
+int palette_findBestMatchExcluding(const palette_t *pal, int r, int g, int b, int exclude, int method)
+{
+	int best_index = 0;
+	int best_dist;
+	int dist;
+	int i;
+
+	for (i=0; i<pal->count; i++) {
+		if (i == exclude)
+			continue;
+		dist = getColorDistance(pal->colors[i].r, pal->colors[i].g, pal->colors[i].b, r, g, b);
+
+		if (i==0) {
+			best_index = i;
+			best_dist = dist;
+		} else {
+			if (dist < best_dist) {
+				best_dist = dist;
+				best_index = i;
+			}
+		}
+	}
+
+	return best_index;
+
+}
+
 int palette_findBestMatch(const palette_t *pal, int r, int g, int b, int method)
 {
 	int best_index = 0;
