@@ -1,6 +1,6 @@
 CC=gcc
 LD=$(CC)
-CFLAGS=-Wall -g `libpng-config --cflags` -O0
+CFLAGS=-Wall -g `libpng-config --cflags` -O1 -Werror
 LDFLAGS=`libpng-config --libs` -lm
 
 # Options
