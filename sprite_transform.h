@@ -10,4 +10,6 @@ void sprite_scale3x(const sprite_t *src, sprite_t *dst);
 
 void sprite_rotate(const sprite_t *src, sprite_t *dst, double angle);
 
+void sprite_autoBlackContour(sprite_t *spr);
+
 #endif
