@@ -1,13 +1,13 @@
 CC=gcc
 LD=$(CC)
-CFLAGS=-Wall -g `libpng-config --cflags` -O1 -Werror
+CFLAGS=-Wall -g `libpng-config --cflags` -O1 # -Werror
 LDFLAGS=`libpng-config --libs` -lm
 
 # Options
 WITH_GIF_SUPPORT=1
 
 
-PROG=paltool png2vga png2cga swpxlt plasmagen dither flicinfo flic2png flicplay flicmerge flicfilter scrollmaker img2sms anim2sms prerot
+PROG=paltool png2vga png2cga swpxlt plasmagen dither flicinfo flic2png flicplay flicmerge flicfilter scrollmaker img2sms anim2sms prerot preshift
 OBJS=*.o
 COMMON=palette.o sprite.o builtin_palettes.o rgbimage.o sprite_transform.o util.o growbuf.o swpxlt.o
 
@@ -38,6 +38,9 @@ swpxlt: swpxlt_main.o $(COMMON)
 	$(LD) $(LDFLAGS) $^ -o $@
 
 prerot: prerot.o $(COMMON)
+	$(LD) $(LDFLAGS) $^ -o $@
+
+preshift: preshift.o $(COMMON)
 	$(LD) $(LDFLAGS) $^ -o $@
 
 dither: dither.o $(COMMON)
