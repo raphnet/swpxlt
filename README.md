@@ -562,3 +562,19 @@ depending on the in-game background... So prerot has an option to automatically 
 This is not perfect of course, but the generated output could be a good starting point or reference for the artist. In some cases,
 only a few manual adjustment may be required.
 
+
+### preshift
+
+Preshift takes a source image (typically a tile meant to be repeated in one or two directions making a seemless pattern) and generates a series of shifted variations (by the specified x/y increments) to create a sliding/scrolling effect.
+
+![Source tile for preshift](images/bg5_master.png)
+
+For instance, given the above tile, an horizontally scrolling animation with 2 pixels steps can be created like this:
+
+`
+./preshift -x -2 bg5_master.png bg5_shifted.png
+`
+
+Result:
+
+![Example result for preshift](images/bg5_shifed.png)
