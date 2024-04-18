@@ -16,7 +16,7 @@ static void printHelp()
 {
 	printf("Usage: ./preshift [options] src.png dst.png\n");
 	printf("\n");
-	printf("Preslide takes a source image (typically a tile meant to be repeated\n");
+	printf("Preshift takes a source image (typically a tile meant to be repeated\n");
 	printf("in one or two directions making a seemless pattern) and generates\n");
 	printf("a series of shifted variations (by the specified x/y increments) to create\n");
 	printf("a sliding effect.\n");
