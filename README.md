@@ -43,6 +43,7 @@ On a Debian system, besides the obvious (gcc, make, etc) you need:
  - flicplay : FLI/FLC playback tool using SDL
  - img2sms : Converts a single image to the SMS (Sega Master System) format
  - prerot : Sprite pre-rotation tool (to create copies of a sprite at a series of angle)
+ - preshift : Tile shifting tool (for background scrolling effect)
 
 ### swpxlt
 
@@ -577,4 +578,4 @@ For instance, given the above tile, an horizontally scrolling animation with 2 p
 
 Result:
 
-![Example result for preshift](images/bg5_shifed.png)
+![Example result for preshift](images/bg5_shifted.png)
