@@ -27,6 +27,7 @@ static void printHelp()
 	printf(" -x inc       X offset increment\n");
 	printf(" -y inc       Y offset increment\n");
 	printf(" -z           horiZontal (side to side) frame output, rather than vertical.\n");
+	printf(" -m           Two dimensions mode (For each X loop, Y inc)\n");
 }
 
 int totalSteps(int x_inc, int y_inc, int w, int h)
@@ -60,8 +61,9 @@ int main(int argc, char **argv)
 	int y_inc = 0;
 	int steps;
 	int x, y;
+	int twodim_mode = 0;
 
-	while ((opt = getopt(argc, argv, "hvx:y:z")) != -1) {
+	while ((opt = getopt(argc, argv, "hvx:y:zm")) != -1) {
 		switch (opt) {
 			case '?': return -1;
 			case 'h': printHelp(); return 0;
@@ -69,6 +71,7 @@ int main(int argc, char **argv)
 			case 'x': x_inc = strtol(optarg, &e, 10); break;
 			case 'y': y_inc = strtol(optarg, &e, 10); break;
 			case 'z': horizontal = 1; break;
+			case 'm': twodim_mode = 1; break;
 		}
 	}
 
@@ -92,7 +95,12 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	steps = totalSteps(x_inc, y_inc, original_image->w, original_image->h);
+	if (twodim_mode) {
+		steps = totalSteps(x_inc, 0, original_image->w, original_image->h);
+		steps *= totalSteps(0, y_inc, original_image->w, original_image->w);
+	} else {
+		steps = totalSteps(x_inc, y_inc, original_image->w, original_image->h);
+	}
 
 	if (horizontal) {
 		target_image = allocSprite(original_image->w * steps,
@@ -159,10 +167,20 @@ int main(int argc, char **argv)
 
 		sprite_copyRect(tmpsprite, &srcrect, target_image, &dstrect);
 
-		x += x_inc;
-		y += y_inc;
-		x = x % original_image->w;
-		y = y % original_image->h;
+		if (twodim_mode) {
+			x += x_inc;
+			x = x % original_image->w;
+			if (x == 0) {
+				y += y_inc;
+				y = y % original_image->h;
+			}
+		}
+		else {
+			x += x_inc;
+			y += y_inc;
+			x = x % original_image->w;
+			y = y % original_image->h;
+		}
 	}
 
 	sprite_savePNG(dstfn, target_image, 0);
