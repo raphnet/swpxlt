@@ -248,6 +248,27 @@ int encoder_panOptimize(encoder_t *enc, sprite_t *img)
 	return bestpan;
 }
 
+int encoder_skipFrame(encoder_t *enc)
+{
+	int i;
+
+	i = enc->num_frames;
+
+	printf("** Skipfr %d\n", i);
+	if (i == 0) {
+		printf("Error: Could not skip first frame\n");
+		return -1;
+	}
+	else {
+		enc->frames[i].img = enc->frames[i-1].img;
+		enc->frames[i].map = enc->frames[i-1].map;
+		enc->frames[i].panx = enc->frames[i-1].panx;
+		enc->num_frames++;
+		printf("** SkipAdded frame %d\n", enc->num_frames);
+	}
+	return 0;
+}
+
 int encoder_addFrame(encoder_t *enc, sprite_t *img)
 {
 	tilemap_t *map;
@@ -270,7 +291,7 @@ int encoder_addFrame(encoder_t *enc, sprite_t *img)
 	enc->frames[enc->num_frames].map = map;
 	enc->frames[enc->num_frames].panx = bestpan;
 	enc->num_frames++;
-
+printf("** Added frame %d\n", enc->num_frames);
 	return 0;
 }
 

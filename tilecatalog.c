@@ -113,7 +113,6 @@ static int tilecat_isInCatalogFlags(tilecatalog_t *tc, uint8_t *image_8bpp, uint
 			if (flags) { *flags = TILEMAP_FLIP_XY; }
 			return 1;
 		}
-
 	}
 
 	return 0;
