@@ -32,6 +32,7 @@ typedef struct encoderContext encoder_t;
 encoder_t *encoder_init(int frames, int w, int h, int vram_max_tiles, uint32_t flags);
 void encoder_free(encoder_t *encoder);
 int encoder_addFrame(encoder_t *enc, sprite_t *img);
+int encoder_skipFrame(encoder_t *enc);
 void encoder_printInfo(encoder_t *enc);
 
 void encoder_outputScript(encoder_t *enc, struct encoderOutputFuncs *funcs, void *ctx);
