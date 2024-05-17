@@ -23,6 +23,7 @@ enum {
 	OPT_SUPPORT_CODE_ADDR,
 	OPT_FIRST_BANK,
 	OPT_NO_UNSAFE,
+	OPT_FRAMESKIP,
 };
 
 static void printHelp()
@@ -43,6 +44,7 @@ static void printHelp()
 	printf(" --supportcode_org addr   Support code start address in bank 0\n");
 	printf(" --firstbank no           First bank to use (default: %d)\n", DEFAULT_FIRST_BANK);
 	printf(" --no_unsafe              Only use VRAM safe transfers\n");
+	printf(" --frameskip count        How many frames to skip before drawing one.\n");
 }
 
 static struct option long_options[] = {
@@ -57,6 +59,7 @@ static struct option long_options[] = {
 	{ "supportcode_org",  required_argument, 0, OPT_SUPPORT_CODE_ADDR },
 	{ "firstbank",        required_argument, 0, OPT_FIRST_BANK },
 	{ "no_unsafe",        no_argument,       0, OPT_NO_UNSAFE },
+	{ "frameskip",        required_argument, 0, OPT_FRAMESKIP },
 	{ },
 };
 
@@ -584,6 +587,7 @@ int main(int argc, char **argv)
 	uint16_t support_code_addr = 0;
 	uint8_t first_bank = DEFAULT_FIRST_BANK;
 	uint8_t no_unsafe = 0;
+	int frameskip=0;
 
 	while ((opt = getopt_long_only(argc, argv, "hvo:m:t:", long_options, NULL)) != -1) {
 		switch (opt) {
@@ -635,6 +639,14 @@ int main(int argc, char **argv)
 			case OPT_NO_UNSAFE:
 				no_unsafe = 1;
 				break;
+			case OPT_FRAMESKIP:
+				frameskip = strtol(optarg, &e, 0);
+				if (e == optarg) {
+					fprintf(stderr, "invalid frameskip number\n");
+					return -1;
+				}
+				break;
+
 		}
 	}
 
@@ -660,11 +672,18 @@ int main(int argc, char **argv)
 		}
 
 		for (frame = 0; frame < anim->num_frames; frame++) {
-
 			if (frame >= max_frames) {
 				printf("Reached max frames\n");
 				break;
 			}
+
+			if (frameskip && ((frame % frameskip)!=0)) {
+				printf("Skipping frame %d\n", frame+1);
+				encoder_skipFrame(encoder);
+				continue;
+			}
+
+			sprite_panX(anim->frames[frame], 4);
 
 			printf("Frame %d:\n", frame+ 1);
 			encoder_addFrame(encoder, anim->frames[frame]);
