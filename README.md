@@ -593,7 +593,7 @@ can then convert it to PNG to be editable in normal image programs like this:
 
 Later the file can be converted back to DAT...
 
-`./s58tool -loadpng S58LOGO_new.PNG -savedat S58LOGO.DAT
+`./s58tool -loadpng S58LOGO_new.PNG -savedat S58LOGO.DAT`
 
 ... and copied to SET/S58LOGO.DAT in the USB key. Then, from the settings menu, the new logo can be loaded.
 Make sure to keep a backup of the original files saved from the cash register in case something goes wrong.
