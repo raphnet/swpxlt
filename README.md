@@ -579,3 +579,36 @@ For instance, given the above tile, an horizontally scrolling animation with 2 p
 Result:
 
 ![Example result for preshift](images/bg5_shifted.png)
+
+
+
+### s58tool
+
+This tool converts between the .DAT file format used by Toshiba Tec the MA-2055 (and possibly other models) for receipt logos and images.
+
+From the settings menu on the cash register, one can save the receipt logo to an USB key. This creates the file SET/S58LOGO.DAT. One
+can then convert it to PNG to be editable in normal image programs like this:
+
+`./s58tool -loaddat S58LOGO.DAT -savepng S58LOGO.PNG`
+
+Later the file can be converted back to DAT...
+
+`./s58tool -loadpng S58LOGO_new.PNG -savedat S58LOGO.DAT
+
+... and copied to SET/S58LOGO.DAT in the USB key. Then, from the settings menu, the new logo can be loaded.
+Make sure to keep a backup of the original files saved from the cash register in case something goes wrong.
+
+The correct (as far as I know) dimensions for known files are as below:
+
+ - S58LOGO.DAT   416 x 120
+ - S58INSHI.DAT  160 x 160
+ - S58RYOSY.DAT  664 x 128
+
+s58tool can write .DAT file of other dimensions (it follows the size of the input PNG) but the cash register rejected
+the file when I tried making the logo taller. Either one of the unknown parts of the file header needs updating for
+this to work, or the dimensions are simply predetermined. In any case, the cash register accepted my new 416 x 120 logo just fine.
+
+Note that I never tested updating S58INSHI.DAT and S58RYOSY.DAT, so I don't know if those work. If you run across files of different
+sizes, or get an error when trying to convert DAT files to PNG, let me know.
+
+
