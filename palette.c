@@ -592,7 +592,7 @@ int palette_output_animator_col(FILE *fptr, palette_t *pal)
 int palette_output_gimp(FILE *fptr, palette_t *pal, const char *name)
 {
 	int i;
-	char colorname[16];
+	char colorname[32];
 
 	fprintf(fptr, "GIMP Palette\n");
 	fprintf(fptr, "Name: %s\n", name);
@@ -600,7 +600,7 @@ int palette_output_gimp(FILE *fptr, palette_t *pal, const char *name)
 	fprintf(fptr, "#\n");
 
 	for (i=0; i<pal->count; i++) {
-		snprintf(colorname, 16, "Index %d", i);
+		snprintf(colorname, sizeof(colorname), "Index %d", i);
 		fprintf(fptr, "%3d %3d %3d %s\n",
 			pal->colors[i].r,
 			pal->colors[i].g,
