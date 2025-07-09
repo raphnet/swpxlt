@@ -371,6 +371,46 @@ int palette_loadFromImage(const char *filename, palette_t *dst)
 	return 0;
 }
 
+int palette_loadAct(const char *filename, palette_t *dst)
+{
+	FILE *fptr;
+	long filesize;
+	int i;
+	uint8_t color[3];
+
+	fptr = fopen(filename, "rb");
+	if (!fptr) {
+		perror(filename);
+		return -1;
+	}
+
+	fseek(fptr, 0, SEEK_END);
+	filesize = ftell(fptr);
+	fseek(fptr, 0, SEEK_SET);
+
+	if (filesize != 768 && filesize != 772) {
+		fclose(fptr);
+		return -1;
+	}
+
+	for (i=0; i<256; i++) {
+		if (1 != fread(color, 3, 1, fptr)) {
+			perror(filename);
+			fclose(fptr);
+			return -1;
+		}
+		dst->colors[i].r = color[0];
+		dst->colors[i].g = color[1];
+		dst->colors[i].b = color[2];
+	}
+	dst->count = 256;
+
+	fclose(fptr);
+
+	return 0;
+}
+
+
 int palette_load(const char *filename, palette_t *dst)
 {
 	palette_t src;
@@ -381,6 +421,7 @@ int palette_load(const char *filename, palette_t *dst)
 		{ palette_loadGimpPalette, "Gimp" },
 		{ palette_loadJascPalette, "Jasc" },
 		{ palette_loadFromImage, "Image" },
+		{ palette_loadAct, "ACT" },
 		{ } // terminator
 	};
 	int i;

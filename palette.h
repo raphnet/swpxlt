@@ -33,6 +33,7 @@ enum {
 	PALETTE_FORMAT_SMS_WLADX,
 	PALETTE_FORMAT_SMS_BIN,
 	PALETTE_FORMAT_GIMP,
+	PALETTE_FORMAT_ACT,
 };
 
 // returns PALETTE_FORMAT_NONE if unknown
@@ -50,6 +51,7 @@ void palette_clear(palette_t * pal);
 int palette_compareColorsManhattan(const palette_t *pal, int color1, int color2);
 int palette_compareColorsEuclidian(const palette_t *pal, int color1, int color2);
 
+int palette_loadAct(const char *filename, palette_t *dst);
 int palette_loadGimpPalette(const char *filename, palette_t *dst);
 int palette_loadJascPalette(const char *filename, palette_t *dst);
 int palette_loadFromPng(const char *filename, palette_t *dst);
