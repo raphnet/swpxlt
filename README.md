@@ -327,7 +327,7 @@ Example:
 ./png2vga vga256.png vga256.bsv -sp
 `
 
-See [examples/showvga.bas](examples/showbas.asm) for simple example which loads a full screen image with palette.
+See [examples/showvga.bas](examples/showvga.bas) for simple example which loads a full screen image with palette.
 
 
 ### png2cga (for mode 4)
