@@ -303,6 +303,8 @@ options:
   -p            Append palette data
   -b            Rewrite black pixel values to 0
   -o value      Offset for pixel values
+  -x            Output in planar format for mode X
+  -s            Prepend BSAVE file header
 
 
 input_file must be a 8-bit color PNG file.
@@ -317,6 +319,15 @@ Example:
 `
 
 See [examples/showvga.asm](examples/showvga.asm) for simple example which loads a full screen image with palette.
+
+The prepend BSAVE header (-s) option creates a file compatible with Quick Basic BLOAD statement.
+
+Example:
+`
+./png2vga vga256.png vga256.bsv -sp
+`
+
+See [examples/showvga.bas](examples/showbas.asm) for simple example which loads a full screen image with palette.
 
 
 ### png2cga (for mode 4)

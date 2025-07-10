@@ -6,7 +6,7 @@
 
 #include <png.h>
 
-int convertPNG(FILE *fptr_in, FILE *fptr_out, int append_palette, int value_offset, int black_trick, int for_mode_x);
+int convertPNG(FILE *fptr_in, FILE *fptr_out, int append_palette, int value_offset, int black_trick, int for_mode_x, int bsave_header);
 
 static void printusage(void)
 {
@@ -18,6 +18,7 @@ static void printusage(void)
 	printf("  -b            Rewrite black pixel values to 0\n");
 	printf("  -o value      Offset for pixel values\n");
 	printf("  -x            Output in planar format for mode X\n");
+	printf("  -s            Prepend BSAVE file header\n");
 	printf("\n");
 	printf("\n");
 	printf("input_file must be a 8-bit color PNG file.\n");
@@ -33,8 +34,9 @@ int main(int argc, char **argv)
 	int value_offset = 0;
 	int black_trick = 0;
 	int for_mode_x = 0;
+	int bsave_header = 0;
 
-	while ((opt = getopt(argc, argv, "hpo:bx")) != -1) {
+	while ((opt = getopt(argc, argv, "hpo:bxs")) != -1) {
 		switch (opt)
 		{
 			case 'h':
@@ -51,6 +53,9 @@ int main(int argc, char **argv)
 				break;
 			case 'o':
 				value_offset = atoi(optarg);
+				break;
+			case 's':
+				bsave_header = 1;
 				break;
 		}
 	}
@@ -96,7 +101,7 @@ int main(int argc, char **argv)
 		goto done;
 	}
 
-	ret = convertPNG(fptr_in, fptr_out, append_palette, value_offset, black_trick, for_mode_x);
+	ret = convertPNG(fptr_in, fptr_out, append_palette, value_offset, black_trick, for_mode_x, bsave_header);
 
 done:
 	if (fptr_out) {
@@ -122,7 +127,7 @@ static void writePlanar4(const uint8_t *dat, int count, FILE *outfptr)
 	}
 }
 
-int convertPNG(FILE *fptr_in, FILE *fptr_out, int append_palette, int value_offset, int black_trick, int for_mode_x)
+int convertPNG(FILE *fptr_in, FILE *fptr_out, int append_palette, int value_offset, int black_trick, int for_mode_x, int bsave_header)
 {
 	png_structp png_ptr;
 	png_infop info_ptr;
@@ -185,6 +190,30 @@ int convertPNG(FILE *fptr_in, FILE *fptr_out, int append_palette, int value_offs
 	if (depth != 8) {
 		fprintf(stderr, "Unimplemented color depth\n");
 		return -1;
+	}
+
+	if (bsave_header) {
+		if (append_palette) {
+			if (w*h+2+num_palette*3 > 0xffff) {
+				fprintf(stderr, "Resulting file too large for BSAVE\n");
+				return -1;
+			}
+		} else {
+			if (w*h > 0xffff) {
+				fprintf(stderr, "Resulting file too large for BSAVE\n");
+				return -1;
+			}
+		}
+		uint16_t savesize = w * h;
+		if (append_palette) {
+			// 2 is for palette count
+			savesize += 2 + num_palette*3;
+		}
+		uint8_t bsave_header[7] = { 0xFD, // magic number
+									0x00, 0xA0, // segment
+									0x00, 0x00, // offset
+									savesize, savesize >> 8 };
+		fwrite(bsave_header, sizeof(bsave_header), 1, fptr_out);
 	}
 
 	if (!for_mode_x)
@@ -260,14 +289,14 @@ int convertPNG(FILE *fptr_in, FILE *fptr_out, int append_palette, int value_offs
 				palette[i].blue >> 2
 			};
 
-			printf("Color %d: %d,%d,%d\n", i, palette[i].red, palette[i].green, palette[i].blue);
+			//printf("Color %d: %d,%d,%d\n", i, palette[i].red>>2, palette[i].green>>2, palette[i].blue>>2);
 			fwrite(color, 3, 1, fptr_out);
 		}
 
 
 	}
 
-	printf("ret: %d\n", ret);
+//	printf("ret: %d\n", ret);
 
 done:
 	png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
